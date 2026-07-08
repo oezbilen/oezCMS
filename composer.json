@@ -33,6 +33,7 @@
         "web-auth/webauthn-lib": "^5.2"
     },
     "require-dev": {
+        "captainhook/captainhook": "^5.29",
         "friendsofphp/php-cs-fixer": "^3.95",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^11.5",
