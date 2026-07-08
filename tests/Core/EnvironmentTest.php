@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OezCMS\Tests\Core;
 
 use OezCMS\Core\Environment;
+use OezCMS\Core\EnvironmentException;
 use PHPUnit\Framework\TestCase;
 
 final class EnvironmentTest extends TestCase
@@ -50,5 +51,14 @@ final class EnvironmentTest extends TestCase
         $environment->load();
 
         self::assertSame('oezCMS', $environment->get('APP_NAME'));
+    }
+
+    public function testThrowsExceptionWhenFileDoesNotExist(): void
+    {
+        $environment = new Environment($this->basePath . '/does-not-exist.env');
+
+        $this->expectException(EnvironmentException::class);
+
+        $environment->load();
     }
 }
