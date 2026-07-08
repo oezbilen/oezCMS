@@ -1,0 +1,17 @@
+parameters:
+    level: 8
+    paths:
+        - bin
+        - plugins
+        - public
+        - src
+        - tests
+
+    excludePaths:
+        analyse:
+            - database/*
+            - docs/*
+            - vendor/*
+            - storage/*
+            - templates/*
+            - cache/*

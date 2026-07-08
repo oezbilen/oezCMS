@@ -18,7 +18,6 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "validate": "composer validate --strict",
     "require": {
         "php": "^8.4",
         "ext-pdo": "*",
@@ -58,7 +57,7 @@
     "scripts": {
         "cs:check": "php-cs-fixer fix --dry-run --diff --verbose",
         "cs:fix": "php-cs-fixer fix --verbose",
-        "analyse": "phpstan analyse src --level=8 --memory-limit=2G",
+        "analyse": "phpstan analyse --memory-limit=2G",
         "test": "phpunit --configuration phpunit.xml",
         "quality": [
             "@cs:check",

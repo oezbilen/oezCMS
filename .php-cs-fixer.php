@@ -52,10 +52,10 @@ return (new Config())
             'on_multiline' => 'ensure_fully_multiline'
         ],
         'phpdoc_align' => true,
-        'visibility_required' => [
+        'modifier_keywords' => [
             'elements' => [
-                'method',
-                'property'
+                'property',
+                'method'
             ]
         ],
     ])
