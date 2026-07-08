@@ -56,12 +56,12 @@
         "allow-plugins": false
     },
     "scripts": {
-        "lint": "php-cs-fixer fix --dry-run --diff --verbose",
-        "fix": "php-cs-fixer fix --verbose",
+        "cs:check": "php-cs-fixer fix --dry-run --diff --verbose",
+        "cs:fix": "php-cs-fixer fix --verbose",
         "analyse": "phpstan analyse src --level=8 --memory-limit=2G",
         "test": "phpunit --configuration phpunit.xml",
         "quality": [
-            "@lint",
+            "@cs:check",
             "@analyse",
             "@test"
         ],
