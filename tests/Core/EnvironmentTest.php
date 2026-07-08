@@ -61,4 +61,18 @@ final class EnvironmentTest extends TestCase
 
         $environment->load();
     }
+
+    public function testIgnoresCommentLines(): void
+    {
+        file_put_contents(
+            $this->envFile,
+            "# a full comment line\n#APP_ENV=production\nAPP_NAME=oezCMS\n",
+        );
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->get('APP_NAME'));
+        self::assertNull($environment->get('#APP_ENV'));
+    }
 }
