@@ -15,10 +15,18 @@ final class Environment
 
     public function load(): void
     {
+        if (!is_file($this->envFile) || !is_readable($this->envFile)) {
+            throw new EnvironmentException(
+                sprintf('Environment file "%s" does not exist or is not readable.', $this->envFile),
+            );
+        }
+
         $lines = file($this->envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
         if (false === $lines) {
-            return;
+            throw new EnvironmentException(
+                sprintf('Unable to read environment file "%s".', $this->envFile),
+            );
         }
 
         foreach ($lines as $line) {
