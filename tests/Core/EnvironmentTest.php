@@ -84,4 +84,16 @@ final class EnvironmentTest extends TestCase
         self::assertSame('oezCMS', $_ENV['APP_NAME'] ?? null);
         self::assertSame('oezCMS', $_SERVER['APP_NAME'] ?? null);
     }
+
+    public function testDoesNotOverrideExistingEnvironmentVariables(): void
+    {
+        $_ENV['APP_NAME'] = 'from-real-env';
+        $_SERVER['APP_NAME'] = 'from-real-env';
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('from-real-env', $_ENV['APP_NAME']);
+        self::assertSame('from-real-env', $environment->get('APP_NAME'));
+    }
 }
