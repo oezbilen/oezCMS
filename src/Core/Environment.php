@@ -32,6 +32,11 @@ final class Environment
         foreach ($lines as $line) {
             $line = trim($line);
 
+            // ignore comments
+            if (str_starts_with($line, '#')) {
+                continue;
+            }
+
             // key=value parsing
             if (!str_contains($line, '=')) {
                 continue;
