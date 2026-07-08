@@ -96,4 +96,20 @@ final class EnvironmentTest extends TestCase
         self::assertSame('from-real-env', $_ENV['APP_NAME']);
         self::assertSame('from-real-env', $environment->get('APP_NAME'));
     }
+
+    public function testStripsSurroundingQuotesFromValues(): void
+    {
+        unset($_ENV['APP_TITLE'], $_SERVER['APP_TITLE']);
+
+        file_put_contents(
+            $this->envFile,
+            "APP_NAME=\"oezCMS\"\nAPP_TITLE='oez Content'\n",
+        );
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->get('APP_NAME'));
+        self::assertSame('oez Content', $environment->get('APP_TITLE'));
+    }
 }
