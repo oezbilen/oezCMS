@@ -44,7 +44,7 @@ final class Environment
 
             $parts = explode('=', $line, 2);
             $key = trim($parts[0]);
-            $value = trim($parts[1] ?? '');
+            $value = $this->stripQuotes(trim($parts[1] ?? ''));
 
             if (isset($_ENV[$key]) || isset($_SERVER[$key])) {
                 $existing = $_ENV[$key] ?? $_SERVER[$key];
@@ -60,6 +60,22 @@ final class Environment
             $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
         }
+    }
+
+    private function stripQuotes(string $value): string
+    {
+        if (strlen($value) < 2) {
+            return $value;
+        }
+
+        $first = $value[0];
+        $last = $value[strlen($value) - 1];
+
+        if (('"' === $first && '"' === $last) || ("'" === $first && "'" === $last)) {
+            return substr($value, 1, -1);
+        }
+
+        return $value;
     }
 
     public function get(string $key): ?string
