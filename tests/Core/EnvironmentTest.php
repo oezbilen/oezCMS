@@ -75,4 +75,13 @@ final class EnvironmentTest extends TestCase
         self::assertSame('oezCMS', $environment->get('APP_NAME'));
         self::assertNull($environment->get('#APP_ENV'));
     }
+
+    public function testExportsVariablesToSuperglobals(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $_ENV['APP_NAME'] ?? null);
+        self::assertSame('oezCMS', $_SERVER['APP_NAME'] ?? null);
+    }
 }
