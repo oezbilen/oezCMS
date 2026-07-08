@@ -47,6 +47,8 @@ final class Environment
             $value = trim($parts[1] ?? '');
 
             $this->variables[$key] = $value;
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
         }
     }
 
