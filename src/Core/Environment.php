@@ -46,6 +46,16 @@ final class Environment
             $key = trim($parts[0]);
             $value = trim($parts[1] ?? '');
 
+            if (isset($_ENV[$key]) || isset($_SERVER[$key])) {
+                $existing = $_ENV[$key] ?? $_SERVER[$key];
+
+                if (is_string($existing)) {
+                    $this->variables[$key] = $existing;
+                }
+
+                continue;
+            }
+
             $this->variables[$key] = $value;
             $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
