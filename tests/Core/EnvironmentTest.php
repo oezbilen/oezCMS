@@ -150,4 +150,91 @@ final class EnvironmentTest extends TestCase
         self::assertSame('abc#123', $environment->get('APP_SECRET'));
         self::assertSame('oez # CMS', $environment->get('APP_TITLE'));
     }
+
+    public function testGetStringReturnsValue(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->getString('APP_NAME'));
+    }
+
+    public function testGetStringReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('fallback', $environment->getString('DOES_NOT_EXIST', 'fallback'));
+    }
+
+    public function testGetBoolReturnsTrueForTrueLikeValues(): void
+    {
+        unset($_ENV['FLAG'], $_SERVER['FLAG']);
+        file_put_contents($this->envFile, "FLAG=true\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('FLAG'));
+    }
+
+    public function testGetBoolReturnsFalseForFalseLikeValues(): void
+    {
+        unset($_ENV['FLAG'], $_SERVER['FLAG']);
+        file_put_contents($this->envFile, "FLAG=false\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertFalse($environment->getBool('FLAG', true));
+    }
+
+    public function testGetBoolReturnsDefaultForUnrecognizedValue(): void
+    {
+        unset($_ENV['FLAG'], $_SERVER['FLAG']);
+        file_put_contents($this->envFile, "FLAG=maybe\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('FLAG', true));
+    }
+
+    public function testGetBoolReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('DOES_NOT_EXIST', true));
+    }
+
+    public function testGetIntReturnsValue(): void
+    {
+        unset($_ENV['PORT'], $_SERVER['PORT']);
+        file_put_contents($this->envFile, "PORT=8080\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(8080, $environment->getInt('PORT'));
+    }
+
+    public function testGetIntReturnsDefaultForNonNumericValue(): void
+    {
+        unset($_ENV['PORT'], $_SERVER['PORT']);
+        file_put_contents($this->envFile, "PORT=not-a-number\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(3306, $environment->getInt('PORT', 3306));
+    }
+
+    public function testGetIntReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(3306, $environment->getInt('DOES_NOT_EXIST', 3306));
+    }
 }

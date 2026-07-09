@@ -104,4 +104,35 @@ final class Environment
     {
         return $this->variables[$key] ?? null;
     }
+
+    public function getString(string $key, string $default = ''): string
+    {
+        return $this->get($key) ?? $default;
+    }
+
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $value = $this->get($key);
+
+        if (null === $value) {
+            return $default;
+        }
+
+        return match (strtolower($value)) {
+            'true', '1', 'yes', 'on' => true,
+            'false', '0', 'no', 'off' => false,
+            default => $default,
+        };
+    }
+
+    public function getInt(string $key, int $default = 0): int
+    {
+        $value = $this->get($key);
+
+        if (null === $value || !is_numeric($value)) {
+            return $default;
+        }
+
+        return (int) $value;
+    }
 }
