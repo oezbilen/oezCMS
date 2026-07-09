@@ -33,6 +33,13 @@ final class Config
         return is_int($value) ? $value : $default;
     }
 
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $value = $this->resolve($key);
+
+        return is_bool($value) ? $value : $default;
+    }
+
     private function resolve(string $key): mixed
     {
         $value = $this->items;
