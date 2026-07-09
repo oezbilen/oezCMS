@@ -32,4 +32,25 @@ final class DatabaseTest extends TestCase
         self::assertSame('Alice', $rows[0]['name']);
         self::assertSame('Bob', $rows[1]['name']);
     }
+
+    public function testFetchOneReturnsSingleRow(): void
+    {
+        $row = $this->database->fetchOne(
+            'SELECT id, name FROM users WHERE name = :name',
+            ['name' => 'Alice'],
+        );
+
+        self::assertNotNull($row);
+        self::assertSame('Alice', $row['name']);
+    }
+
+    public function testFetchOneReturnsNullWhenNoRowMatches(): void
+    {
+        $row = $this->database->fetchOne(
+            'SELECT id, name FROM users WHERE name = :name',
+            ['name' => 'Nobody'],
+        );
+
+        self::assertNull($row);
+    }
 }
