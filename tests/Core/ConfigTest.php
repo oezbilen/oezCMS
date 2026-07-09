@@ -29,4 +29,37 @@ final class ConfigTest extends TestCase
 
         self::assertSame('', $config->getString('port'));
     }
+
+    public function testGetStringResolvesNestedKeysWithDotNotation(): void
+    {
+        $config = new Config([
+            'app' => [
+                'name' => 'oezCMS',
+            ],
+        ]);
+
+        self::assertSame('oezCMS', $config->getString('app.name'));
+    }
+
+    public function testGetStringReturnsDefaultForMissingNestedKey(): void
+    {
+        $config = new Config([
+            'app' => [
+                'name' => 'oezCMS',
+            ],
+        ]);
+
+        self::assertSame('n/a', $config->getString('app.version', 'n/a'));
+    }
+
+    public function testGetStringReturnsDefaultWhenTraversingNonArray(): void
+    {
+        $config = new Config([
+            'app' => [
+                'name' => 'oezCMS',
+            ],
+        ]);
+
+        self::assertSame('x', $config->getString('app.name.deep', 'x'));
+    }
 }
