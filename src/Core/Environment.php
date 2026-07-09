@@ -109,4 +109,19 @@ final class Environment
     {
         return $this->get($key) ?? $default;
     }
+
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $value = $this->get($key);
+
+        if (null === $value) {
+            return $default;
+        }
+
+        return match (strtolower($value)) {
+            'true', '1', 'yes', 'on' => true,
+            'false', '0', 'no', 'off' => false,
+            default => $default,
+        };
+    }
 }
