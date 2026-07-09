@@ -104,4 +104,9 @@ final class Environment
     {
         return $this->variables[$key] ?? null;
     }
+
+    public function getString(string $key, string $default = ''): string
+    {
+        return $this->get($key) ?? $default;
+    }
 }
