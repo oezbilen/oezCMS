@@ -46,6 +46,10 @@ final class Environment
             $key = trim($parts[0]);
             $value = $this->stripQuotes(trim($parts[1] ?? ''));
 
+            if ('' === $key) {
+                continue;
+            }
+
             if (isset($_ENV[$key]) || isset($_SERVER[$key])) {
                 $existing = $_ENV[$key] ?? $_SERVER[$key];
 
