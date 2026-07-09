@@ -21,6 +21,11 @@ final class Config
         return is_string($value) ? $value : $default;
     }
 
+    public function has(string $key): bool
+    {
+        return null !== $this->resolve($key);
+    }
+
     private function resolve(string $key): mixed
     {
         $value = $this->items;
