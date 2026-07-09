@@ -129,4 +129,25 @@ final class EnvironmentTest extends TestCase
         self::assertNull($environment->get(''));
         self::assertArrayNotHasKey('', $_ENV);
     }
+
+    public function testStripsInlineComments(): void
+    {
+        unset(
+            $_ENV['APP_NAME'], $_SERVER['APP_NAME'],
+            $_ENV['APP_SECRET'], $_SERVER['APP_SECRET'],
+            $_ENV['APP_TITLE'], $_SERVER['APP_TITLE'],
+        );
+
+        file_put_contents(
+            $this->envFile,
+            "APP_NAME=oezCMS # inline comment\nAPP_SECRET=abc#123\nAPP_TITLE=\"oez # CMS\"\n",
+        );
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->get('APP_NAME'));
+        self::assertSame('abc#123', $environment->get('APP_SECRET'));
+        self::assertSame('oez # CMS', $environment->get('APP_TITLE'));
+    }
 }
