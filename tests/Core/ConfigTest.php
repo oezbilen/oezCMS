@@ -62,4 +62,26 @@ final class ConfigTest extends TestCase
 
         self::assertSame('x', $config->getString('app.name.deep', 'x'));
     }
+
+    public function testHasReturnsTrueForExistingNestedKey(): void
+    {
+        $config = new Config([
+            'app' => [
+                'name' => 'oezCMS',
+            ],
+        ]);
+
+        self::assertTrue($config->has('app.name'));
+    }
+
+    public function testHasReturnsFalseForMissingKey(): void
+    {
+        $config = new Config([
+            'app' => [
+                'name' => 'oezCMS',
+            ],
+        ]);
+
+        self::assertFalse($config->has('app.version'));
+    }
 }
