@@ -124,4 +124,15 @@ final class Environment
             default => $default,
         };
     }
+
+    public function getInt(string $key, int $default = 0): int
+    {
+        $value = $this->get($key);
+
+        if (null === $value || !is_numeric($value)) {
+            return $default;
+        }
+
+        return (int) $value;
+    }
 }
