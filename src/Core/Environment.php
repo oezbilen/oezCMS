@@ -44,7 +44,10 @@ final class Environment
 
             $parts = explode('=', $line, 2);
             $key = trim($parts[0]);
-            $value = $this->stripQuotes(trim($parts[1] ?? ''));
+
+            $value = trim($parts[1] ?? '');
+            $value = $this->stripInlineComment($value);
+            $value = $this->stripQuotes($value);
 
             if ('' === $key) {
                 continue;
@@ -77,6 +80,21 @@ final class Environment
 
         if (('"' === $first && '"' === $last) || ("'" === $first && "'" === $last)) {
             return substr($value, 1, -1);
+        }
+
+        return $value;
+    }
+
+    private function stripInlineComment(string $value): string
+    {
+        if ('' !== $value && ('"' === $value[0] || "'" === $value[0])) {
+            return $value;
+        }
+
+        $position = strpos($value, ' #');
+
+        if (false !== $position) {
+            return rtrim(substr($value, 0, $position));
         }
 
         return $value;
