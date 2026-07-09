@@ -105,4 +105,25 @@ final class ConfigTest extends TestCase
 
         self::assertSame(3306, $config->getInt('missing', 3306));
     }
+
+    public function testGetBoolReturnsValue(): void
+    {
+        $config = new Config(['debug' => false]);
+
+        self::assertFalse($config->getBool('debug', true));
+    }
+
+    public function testGetBoolReturnsDefaultForNonBoolValue(): void
+    {
+        $config = new Config(['debug' => 'true']);
+
+        self::assertTrue($config->getBool('debug', true));
+    }
+
+    public function testGetBoolReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $config = new Config([]);
+
+        self::assertTrue($config->getBool('missing', true));
+    }
 }
