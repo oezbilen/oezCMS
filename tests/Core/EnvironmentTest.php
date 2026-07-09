@@ -150,4 +150,20 @@ final class EnvironmentTest extends TestCase
         self::assertSame('abc#123', $environment->get('APP_SECRET'));
         self::assertSame('oez # CMS', $environment->get('APP_TITLE'));
     }
+
+    public function testGetStringReturnsValue(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->getString('APP_NAME'));
+    }
+
+    public function testGetStringReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('fallback', $environment->getString('DOES_NOT_EXIST', 'fallback'));
+    }
 }
