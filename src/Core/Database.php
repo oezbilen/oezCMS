@@ -40,6 +40,14 @@ final class Database
     /**
      * @param array<string, mixed> $parameters
      */
+    public function execute(string $sql, array $parameters = []): int
+    {
+        return $this->run($sql, $parameters)->rowCount();
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
     private function run(string $sql, array $parameters): PDOStatement
     {
         $statement = $this->connection->prepare($sql);
