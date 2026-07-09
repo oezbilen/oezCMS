@@ -26,6 +26,13 @@ final class Config
         return null !== $this->resolve($key);
     }
 
+    public function getInt(string $key, int $default = 0): int
+    {
+        $value = $this->resolve($key);
+
+        return is_int($value) ? $value : $default;
+    }
+
     private function resolve(string $key): mixed
     {
         $value = $this->items;
