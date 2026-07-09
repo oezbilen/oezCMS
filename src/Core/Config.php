@@ -16,8 +16,23 @@ final class Config
 
     public function getString(string $key, string $default = ''): string
     {
-        $value = $this->items[$key] ?? null;
+        $value = $this->resolve($key);
 
         return is_string($value) ? $value : $default;
+    }
+
+    private function resolve(string $key): mixed
+    {
+        $value = $this->items;
+
+        foreach (explode('.', $key) as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return null;
+            }
+
+            $value = $value[$segment];
+        }
+
+        return $value;
     }
 }
