@@ -166,4 +166,45 @@ final class EnvironmentTest extends TestCase
 
         self::assertSame('fallback', $environment->getString('DOES_NOT_EXIST', 'fallback'));
     }
+
+    public function testGetBoolReturnsTrueForTrueLikeValues(): void
+    {
+        unset($_ENV['FLAG'], $_SERVER['FLAG']);
+        file_put_contents($this->envFile, "FLAG=true\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('FLAG'));
+    }
+
+    public function testGetBoolReturnsFalseForFalseLikeValues(): void
+    {
+        unset($_ENV['FLAG'], $_SERVER['FLAG']);
+        file_put_contents($this->envFile, "FLAG=false\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertFalse($environment->getBool('FLAG', true));
+    }
+
+    public function testGetBoolReturnsDefaultForUnrecognizedValue(): void
+    {
+        unset($_ENV['FLAG'], $_SERVER['FLAG']);
+        file_put_contents($this->envFile, "FLAG=maybe\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('FLAG', true));
+    }
+
+    public function testGetBoolReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('DOES_NOT_EXIST', true));
+    }
 }
