@@ -84,4 +84,25 @@ final class ConfigTest extends TestCase
 
         self::assertFalse($config->has('app.version'));
     }
+
+    public function testGetIntReturnsValue(): void
+    {
+        $config = new Config(['port' => 8080]);
+
+        self::assertSame(8080, $config->getInt('port'));
+    }
+
+    public function testGetIntReturnsDefaultForNonIntValue(): void
+    {
+        $config = new Config(['port' => '8080']);
+
+        self::assertSame(3306, $config->getInt('port', 3306));
+    }
+
+    public function testGetIntReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $config = new Config([]);
+
+        self::assertSame(3306, $config->getInt('missing', 3306));
+    }
 }
