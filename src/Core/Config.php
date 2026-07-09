@@ -40,6 +40,17 @@ final class Config
         return is_bool($value) ? $value : $default;
     }
 
+    /**
+     * @param  array<mixed> $default
+     * @return array<mixed>
+     */
+    public function getArray(string $key, array $default = []): array
+    {
+        $value = $this->resolve($key);
+
+        return is_array($value) ? $value : $default;
+    }
+
     private function resolve(string $key): mixed
     {
         $value = $this->items;
