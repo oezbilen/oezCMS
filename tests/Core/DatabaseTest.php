@@ -53,4 +53,25 @@ final class DatabaseTest extends TestCase
 
         self::assertNull($row);
     }
+
+    public function testExecuteInsertsRowAndReturnsAffectedCount(): void
+    {
+        $affected = $this->database->execute(
+            'INSERT INTO users (id, name) VALUES (:id, :name)',
+            ['id' => 3, 'name' => 'Charlie'],
+        );
+
+        self::assertSame(1, $affected);
+        self::assertNotNull(
+            $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Charlie']),
+        );
+    }
+
+    public function testExecuteDeletesMatchingRowsAndReturnsAffectedCount(): void
+    {
+        $affected = $this->database->execute('DELETE FROM users WHERE id = :id', ['id' => 2]);
+
+        self::assertSame(1, $affected);
+        self::assertCount(1, $this->database->fetchAll('SELECT id FROM users'));
+    }
 }
