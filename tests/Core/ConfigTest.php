@@ -126,4 +126,33 @@ final class ConfigTest extends TestCase
 
         self::assertTrue($config->getBool('missing', true));
     }
+
+    public function testGetArrayReturnsValue(): void
+    {
+        $config = new Config([
+            'database' => [
+                'host' => 'localhost',
+                'port' => 3306,
+            ],
+        ]);
+
+        self::assertSame(
+            ['host' => 'localhost', 'port' => 3306],
+            $config->getArray('database'),
+        );
+    }
+
+    public function testGetArrayReturnsDefaultForNonArrayValue(): void
+    {
+        $config = new Config(['app_name' => 'oezCMS']);
+
+        self::assertSame(['fallback'], $config->getArray('app_name', ['fallback']));
+    }
+
+    public function testGetArrayReturnsEmptyArrayByDefault(): void
+    {
+        $config = new Config([]);
+
+        self::assertSame([], $config->getArray('missing'));
+    }
 }
