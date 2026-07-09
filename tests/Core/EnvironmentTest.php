@@ -207,4 +207,34 @@ final class EnvironmentTest extends TestCase
 
         self::assertTrue($environment->getBool('DOES_NOT_EXIST', true));
     }
+
+    public function testGetIntReturnsValue(): void
+    {
+        unset($_ENV['PORT'], $_SERVER['PORT']);
+        file_put_contents($this->envFile, "PORT=8080\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(8080, $environment->getInt('PORT'));
+    }
+
+    public function testGetIntReturnsDefaultForNonNumericValue(): void
+    {
+        unset($_ENV['PORT'], $_SERVER['PORT']);
+        file_put_contents($this->envFile, "PORT=not-a-number\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(3306, $environment->getInt('PORT', 3306));
+    }
+
+    public function testGetIntReturnsDefaultWhenKeyIsMissing(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(3306, $environment->getInt('DOES_NOT_EXIST', 3306));
+    }
 }
