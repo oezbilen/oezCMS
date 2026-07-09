@@ -112,4 +112,21 @@ final class EnvironmentTest extends TestCase
         self::assertSame('oezCMS', $environment->get('APP_NAME'));
         self::assertSame('oez Content', $environment->get('APP_TITLE'));
     }
+
+    public function testIgnoresLinesWithEmptyKey(): void
+    {
+        unset($_ENV['APP_NAME'], $_SERVER['APP_NAME']);
+
+        file_put_contents(
+            $this->envFile,
+            "=orphan\n   =whitespace\nAPP_NAME=oezCMS\n",
+        );
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->get('APP_NAME'));
+        self::assertNull($environment->get(''));
+        self::assertArrayNotHasKey('', $_ENV);
+    }
 }
