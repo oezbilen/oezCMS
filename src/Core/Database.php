@@ -7,6 +7,7 @@ namespace OezCMS\Core;
 use PDO;
 use PDOException;
 use PDOStatement;
+use Throwable;
 
 final class Database
 {
@@ -44,6 +45,41 @@ final class Database
     public function execute(string $sql, array $parameters = []): int
     {
         return $this->run($sql, $parameters)->rowCount();
+    }
+
+    public function lastInsertId(): string
+    {
+        $id = $this->connection->lastInsertId();
+
+        if (false === $id) {
+            throw new DatabaseException('Unable to retrieve the last insert id.');
+        }
+
+        return $id;
+    }
+
+    /**
+     * @template T
+     *
+     * @param callable(self): T $callback
+     *
+     * @return T
+     */
+    public function transaction(callable $callback): mixed
+    {
+        $this->connection->beginTransaction();
+
+        try {
+            $result = $callback($this);
+
+            $this->connection->commit();
+
+            return $result;
+        } catch (Throwable $exception) {
+            $this->connection->rollBack();
+
+            throw $exception;
+        }
     }
 
     /**

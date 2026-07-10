@@ -32,6 +32,7 @@
         "web-auth/webauthn-lib": "^5.2"
     },
     "require-dev": {
+        "ext-pdo_sqlite": "*",
         "captainhook/captainhook": "^5.29",
         "friendsofphp/php-cs-fixer": "^3.95",
         "phpstan/phpstan": "^2.1",
