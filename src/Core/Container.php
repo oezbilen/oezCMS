@@ -33,6 +33,17 @@ final class Container
      * @template T of object
      *
      * @param class-string<T> $id
+     * @param T               $instance
+     */
+    public function instance(string $id, object $instance): void
+    {
+        $this->instances[$id] = $instance;
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $id
      *
      * @return T
      */
