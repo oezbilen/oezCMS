@@ -66,4 +66,9 @@ final class Container
         /** @var T $service */
         return $service;
     }
+
+    public function has(string $id): bool
+    {
+        return isset($this->instances[$id]) || isset($this->factories[$id]);
+    }
 }
