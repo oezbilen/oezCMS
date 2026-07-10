@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OezCMS\Core;
 
 use PDO;
+use PDOException;
 use PDOStatement;
 
 final class Database
@@ -50,14 +51,22 @@ final class Database
      */
     private function run(string $sql, array $parameters): PDOStatement
     {
-        $statement = $this->connection->prepare($sql);
+        try {
+            $statement = $this->connection->prepare($sql);
 
-        if (false === $statement) {
-            throw new DatabaseException(sprintf('Failed to prepare statement: %s', $sql));
+            if (false === $statement) {
+                throw new DatabaseException(sprintf('Failed to prepare statement: %s', $sql));
+            }
+
+            $statement->execute($parameters);
+
+            return $statement;
+        } catch (PDOException $exception) {
+            throw new DatabaseException(
+                sprintf('Database query failed: %s', $exception->getMessage()),
+                (int) $exception->getCode(),
+                $exception,
+            );
         }
-
-        $statement->execute($parameters);
-
-        return $statement;
     }
 }
