@@ -48,4 +48,27 @@ final class ContainerTest extends TestCase
 
         self::assertSame($service, $container->get(stdClass::class));
     }
+
+    public function testHasReturnsTrueForRegisteredFactory(): void
+    {
+        $container = new Container();
+        $container->set(stdClass::class, static fn (): stdClass => new stdClass());
+
+        self::assertTrue($container->has(stdClass::class));
+    }
+
+    public function testHasReturnsTrueForRegisteredInstance(): void
+    {
+        $container = new Container();
+        $container->instance(stdClass::class, new stdClass());
+
+        self::assertTrue($container->has(stdClass::class));
+    }
+
+    public function testHasReturnsFalseForUnregisteredService(): void
+    {
+        $container = new Container();
+
+        self::assertFalse($container->has(stdClass::class));
+    }
 }
