@@ -38,4 +38,14 @@ final class ContainerTest extends TestCase
 
         $container->get(stdClass::class);
     }
+
+    public function testInstanceRegistersPrebuiltObject(): void
+    {
+        $container = new Container();
+        $service = new stdClass();
+
+        $container->instance(stdClass::class, $service);
+
+        self::assertSame($service, $container->get(stdClass::class));
+    }
 }
