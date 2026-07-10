@@ -45,6 +45,10 @@ final class Container
             return $instance;
         }
 
+        if (!isset($this->factories[$id])) {
+            throw new ContainerException(sprintf('Service not registered: %s', $id));
+        }
+
         $service = ($this->factories[$id])($this);
         $this->instances[$id] = $service;
 
