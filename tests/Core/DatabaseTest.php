@@ -128,4 +128,11 @@ final class DatabaseTest extends TestCase
             $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Charlie']),
         );
     }
+
+    public function testLastInsertIdReturnsIdOfInsertedRow(): void
+    {
+        $this->database->execute('INSERT INTO users (name) VALUES (:name)', ['name' => 'Charlie']);
+
+        self::assertSame('3', $this->database->lastInsertId());
+    }
 }
