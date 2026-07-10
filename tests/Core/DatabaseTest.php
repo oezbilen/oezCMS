@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace OezCMS\Tests\Core;
 
 use OezCMS\Core\Database;
+use OezCMS\Core\DatabaseException;
 use PDO;
+use PDOException;
 use PHPUnit\Framework\TestCase;
 
 final class DatabaseTest extends TestCase
@@ -73,5 +75,22 @@ final class DatabaseTest extends TestCase
 
         self::assertSame(1, $affected);
         self::assertCount(1, $this->database->fetchAll('SELECT id FROM users'));
+    }
+
+    public function testWrapsPdoErrorsInDatabaseException(): void
+    {
+        $this->expectException(DatabaseException::class);
+
+        $this->database->fetchAll('SELECT id FROM non_existing_table');
+    }
+
+    public function testKeepsOriginalPdoExceptionAsPrevious(): void
+    {
+        try {
+            $this->database->fetchAll('SELECT id FROM non_existing_table');
+            self::fail('Expected DatabaseException was not thrown.');
+        } catch (DatabaseException $exception) {
+            self::assertInstanceOf(PDOException::class, $exception->getPrevious());
+        }
     }
 }
