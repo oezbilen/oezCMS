@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OezCMS\Tests\Core;
+
+use OezCMS\Core\Container;
+use PHPUnit\Framework\TestCase;
+use stdClass;
+
+final class ContainerTest extends TestCase
+{
+    public function testGetResolvesRegisteredFactory(): void
+    {
+        $container = new Container();
+        $container->set(stdClass::class, static fn (): stdClass => new stdClass());
+
+        self::assertInstanceOf(stdClass::class, $container->get(stdClass::class));
+    }
+
+    public function testGetReturnsSameInstanceOnRepeatedCalls(): void
+    {
+        $container = new Container();
+        $container->set(stdClass::class, static fn (): stdClass => new stdClass());
+
+        self::assertSame(
+            $container->get(stdClass::class),
+            $container->get(stdClass::class),
+        );
+    }
+}
