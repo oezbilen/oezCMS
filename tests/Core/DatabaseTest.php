@@ -93,4 +93,39 @@ final class DatabaseTest extends TestCase
             self::assertInstanceOf(PDOException::class, $exception->getPrevious());
         }
     }
+
+    public function testTransactionCommitsOnSuccessAndReturnsResult(): void
+    {
+        $result = $this->database->transaction(static function (Database $database): int {
+            return $database->execute(
+                'INSERT INTO users (id, name) VALUES (:id, :name)',
+                ['id' => 3, 'name' => 'Charlie'],
+            );
+        });
+
+        self::assertSame(1, $result);
+        self::assertNotNull(
+            $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Charlie']),
+        );
+    }
+
+    public function testTransactionRollsBackOnException(): void
+    {
+        try {
+            $this->database->transaction(static function (Database $database): void {
+                $database->execute(
+                    'INSERT INTO users (id, name) VALUES (:id, :name)',
+                    ['id' => 3, 'name' => 'Charlie'],
+                );
+
+                throw new \RuntimeException('boom');
+            });
+        } catch (\RuntimeException $exception) {
+            self::assertSame('boom', $exception->getMessage());
+        }
+
+        self::assertNull(
+            $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Charlie']),
+        );
+    }
 }
