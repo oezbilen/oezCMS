@@ -47,6 +47,17 @@ final class Database
         return $this->run($sql, $parameters)->rowCount();
     }
 
+    public function lastInsertId(): string
+    {
+        $id = $this->connection->lastInsertId();
+
+        if (false === $id) {
+            throw new DatabaseException('Unable to retrieve the last insert id.');
+        }
+
+        return $id;
+    }
+
     /**
      * @template T
      *
