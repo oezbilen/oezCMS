@@ -12,18 +12,19 @@ use PHPUnit\Framework\TestCase;
 
 final class DatabaseTest extends TestCase
 {
+    private PDO $pdo;
     private Database $database;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $pdo = new PDO('sqlite::memory:');
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
-        $pdo->exec("INSERT INTO users (id, name) VALUES (1, 'Alice'), (2, 'Bob')");
+        $this->pdo = new PDO('sqlite::memory:');
+        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
+        $this->pdo->exec("INSERT INTO users (id, name) VALUES (1, 'Alice'), (2, 'Bob')");
 
-        $this->database = new Database($pdo);
+        $this->database = new Database($this->pdo);
     }
 
     public function testFetchAllReturnsAllMatchingRows(): void
@@ -171,5 +172,26 @@ final class DatabaseTest extends TestCase
         self::assertNull(
             $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Dave']),
         );
+    }
+
+    public function testWrapsTransactionControlErrorsInDatabaseException(): void
+    {
+        $this->pdo->beginTransaction();
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->transaction(static fn (): bool => true);
+    }
+
+    public function testKeepsOriginalPdoExceptionAsPreviousForControlErrors(): void
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $this->database->transaction(static fn (): bool => true);
+            self::fail('Expected DatabaseException was not thrown.');
+        } catch (DatabaseException $exception) {
+            self::assertInstanceOf(PDOException::class, $exception->getPrevious());
+        }
     }
 }
