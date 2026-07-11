@@ -17,6 +17,11 @@ final class Container
     private array $instances = [];
 
     /**
+     * @var array<class-string, true>
+     */
+    private array $resolving = [];
+
+    /**
      * @template T of object
      *
      * @param class-string<T>   $id
@@ -60,7 +65,22 @@ final class Container
             throw new ContainerException(sprintf('Service not registered: %s', $id));
         }
 
-        $service = ($this->factories[$id])($this);
+        if (isset($this->resolving[$id])) {
+            throw new ContainerException(sprintf(
+                'Circular dependency detected: %s -> %s',
+                implode(' -> ', array_keys($this->resolving)),
+                $id,
+            ));
+        }
+
+        $this->resolving[$id] = true;
+
+        try {
+            $service = ($this->factories[$id])($this);
+        } finally {
+            unset($this->resolving[$id]);
+        }
+
         $this->instances[$id] = $service;
 
         /** @var T $service */
