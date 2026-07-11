@@ -135,4 +135,41 @@ final class DatabaseTest extends TestCase
 
         self::assertSame('3', $this->database->lastInsertId());
     }
+
+    public function testNestedTransactionCommitsWithOuter(): void
+    {
+        $this->database->transaction(function (Database $outer): void {
+            $outer->execute('INSERT INTO users (id, name) VALUES (:id, :name)', ['id' => 3, 'name' => 'Charlie']);
+
+            $outer->transaction(static function (Database $inner): void {
+                $inner->execute('INSERT INTO users (id, name) VALUES (:id, :name)', ['id' => 4, 'name' => 'Dave']);
+            });
+        });
+
+        self::assertCount(4, $this->database->fetchAll('SELECT id FROM users'));
+    }
+
+    public function testNestedTransactionRollsBackOnlyInnerChanges(): void
+    {
+        $this->database->transaction(function (Database $outer): void {
+            $outer->execute('INSERT INTO users (id, name) VALUES (:id, :name)', ['id' => 3, 'name' => 'Charlie']);
+
+            try {
+                $outer->transaction(static function (Database $inner): void {
+                    $inner->execute('INSERT INTO users (id, name) VALUES (:id, :name)', ['id' => 4, 'name' => 'Dave']);
+
+                    throw new \RuntimeException('inner boom');
+                });
+            } catch (\RuntimeException $exception) {
+                self::assertSame('inner boom', $exception->getMessage());
+            }
+        });
+
+        self::assertNotNull(
+            $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Charlie']),
+        );
+        self::assertNull(
+            $this->database->fetchOne('SELECT id FROM users WHERE name = :name', ['name' => 'Dave']),
+        );
+    }
 }

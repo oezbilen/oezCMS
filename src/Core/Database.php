@@ -11,6 +11,8 @@ use Throwable;
 
 final class Database
 {
+    private int $transactionLevel = 0;
+
     public function __construct(private readonly PDO $connection)
     {
     }
@@ -67,18 +69,36 @@ final class Database
      */
     public function transaction(callable $callback): mixed
     {
-        $this->connection->beginTransaction();
+        $level = $this->transactionLevel;
+
+        if (0 === $level) {
+            $this->connection->beginTransaction();
+        } else {
+            $this->connection->exec(sprintf('SAVEPOINT oezcms_sp_%d', $level));
+        }
+
+        ++$this->transactionLevel;
 
         try {
             $result = $callback($this);
 
-            $this->connection->commit();
+            if (0 === $level) {
+                $this->connection->commit();
+            } else {
+                $this->connection->exec(sprintf('RELEASE SAVEPOINT oezcms_sp_%d', $level));
+            }
 
             return $result;
         } catch (Throwable $exception) {
-            $this->connection->rollBack();
+            if (0 === $level) {
+                $this->connection->rollBack();
+            } else {
+                $this->connection->exec(sprintf('ROLLBACK TO SAVEPOINT oezcms_sp_%d', $level));
+            }
 
             throw $exception;
+        } finally {
+            --$this->transactionLevel;
         }
     }
 
