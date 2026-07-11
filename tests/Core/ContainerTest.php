@@ -71,4 +71,36 @@ final class ContainerTest extends TestCase
 
         self::assertFalse($container->has(stdClass::class));
     }
+
+    public function testGetDetectsCircularDependency(): void
+    {
+        $container = new Container();
+        $container->set(
+            stdClass::class,
+            static fn (Container $c): stdClass => $c->get(stdClass::class),
+        );
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessageMatches('/circular dependency/i');
+
+        $container->get(stdClass::class);
+    }
+
+    public function testContainerStaysUsableAfterCircularDependencyError(): void
+    {
+        $container = new Container();
+        $container->set(
+            stdClass::class,
+            static fn (Container $c): stdClass => $c->get(stdClass::class),
+        );
+
+        try {
+            $container->get(stdClass::class);
+        } catch (ContainerException) {
+        }
+
+        $container->set(stdClass::class, static fn (): stdClass => new stdClass());
+
+        self::assertInstanceOf(stdClass::class, $container->get(stdClass::class));
+    }
 }
