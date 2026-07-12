@@ -15,4 +15,16 @@ final class DatabaseExceptionTest extends TestCase
 
         throw new DatabaseException('database error');
     }
+
+    public function testCarriesSqlAndParameters(): void
+    {
+        $exception = new DatabaseException(
+            message: 'query failed',
+            sql: 'SELECT id FROM users WHERE id = :id',
+            parameters: ['id' => 7],
+        );
+
+        self::assertSame('SELECT id FROM users WHERE id = :id', $exception->getSql());
+        self::assertSame(['id' => 7], $exception->getParameters());
+    }
 }
