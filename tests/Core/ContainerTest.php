@@ -14,9 +14,10 @@ final class ContainerTest extends TestCase
     public function testGetResolvesRegisteredFactory(): void
     {
         $container = new Container();
-        $container->set(stdClass::class, static fn (): stdClass => new stdClass());
+        $service = new stdClass();
+        $container->set(stdClass::class, static fn (): stdClass => $service);
 
-        self::assertInstanceOf(stdClass::class, $container->get(stdClass::class));
+        self::assertSame($service, $container->get(stdClass::class));
     }
 
     public function testGetReturnsSameInstanceOnRepeatedCalls(): void
@@ -99,8 +100,9 @@ final class ContainerTest extends TestCase
         } catch (ContainerException) {
         }
 
-        $container->set(stdClass::class, static fn (): stdClass => new stdClass());
+        $service = new stdClass();
+        $container->set(stdClass::class, static fn (): stdClass => $service);
 
-        self::assertInstanceOf(stdClass::class, $container->get(stdClass::class));
+        self::assertSame($service, $container->get(stdClass::class));
     }
 }
