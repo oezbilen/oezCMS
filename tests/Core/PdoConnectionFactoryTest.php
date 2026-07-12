@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OezCMS\Tests\Core;
+
+use OezCMS\Core\Config;
+use OezCMS\Core\PdoConnectionFactory;
+use PHPUnit\Framework\TestCase;
+
+final class PdoConnectionFactoryTest extends TestCase
+{
+    public function testBuildsDsnFromConfig(): void
+    {
+        $config = new Config([
+            'database' => [
+                'host' => 'db.example.com',
+                'port' => 3307,
+                'name' => 'oezcms',
+                'charset' => 'utf8mb4',
+            ],
+        ]);
+
+        $factory = new PdoConnectionFactory();
+
+        self::assertSame(
+            'mysql:host=db.example.com;port=3307;dbname=oezcms;charset=utf8mb4',
+            $factory->dsn($config),
+        );
+    }
+
+    public function testDsnUsesDefaultsForMissingValues(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+            ],
+        ]);
+
+        $factory = new PdoConnectionFactory();
+
+        self::assertSame(
+            'mysql:host=127.0.0.1;port=3306;dbname=oezcms;charset=utf8mb4',
+            $factory->dsn($config),
+        );
+    }
+}
