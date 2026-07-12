@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OezCMS\Tests\Core;
 
 use OezCMS\Core\Config;
+use OezCMS\Core\Database;
 use OezCMS\Core\Environment;
 use OezCMS\Core\Kernel;
 use PHPUnit\Framework\TestCase;
@@ -84,5 +85,12 @@ final class KernelTest extends TestCase
         $config = $container->get(Config::class);
 
         self::assertFalse($config->has('database.charset'));
+    }
+
+    public function testBootRegistersLazyDatabaseFactory(): void
+    {
+        $container = (new Kernel($this->envFile))->boot();
+
+        self::assertTrue($container->has(Database::class));
     }
 }
