@@ -194,4 +194,15 @@ final class DatabaseTest extends TestCase
             self::assertInstanceOf(PDOException::class, $exception->getPrevious());
         }
     }
+
+    public function testAttachesSqlAndParametersToQueryErrors(): void
+    {
+        try {
+            $this->database->fetchAll('SELECT id FROM non_existing_table WHERE id = :id', ['id' => 1]);
+            self::fail('Expected DatabaseException was not thrown.');
+        } catch (DatabaseException $exception) {
+            self::assertSame('SELECT id FROM non_existing_table WHERE id = :id', $exception->getSql());
+            self::assertSame(['id' => 1], $exception->getParameters());
+        }
+    }
 }
