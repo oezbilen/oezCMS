@@ -1,0 +1,19 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use OezCMS\Console\Application;
+use OezCMS\Console\CommandRegistry;
+use OezCMS\Console\Input;
+use OezCMS\Console\StandardOutput;
+use OezCMS\Console\VersionCommand;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$registry = new CommandRegistry();
+$registry->register(new VersionCommand());
+
+$application = new Application($registry);
+
+exit($application->run(Input::fromArgv(array_values($argv)), new StandardOutput())->value);
