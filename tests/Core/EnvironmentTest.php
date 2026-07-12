@@ -19,12 +19,12 @@ final class EnvironmentTest extends TestCase
 
         $this->basePath = sys_get_temp_dir() . '/oezcms-env-test-' . uniqid();
         if (!mkdir($this->basePath, 0777) && !is_dir($this->basePath)) {
-            $this->fail('Unable to create temporary test directory.');
+            self::fail('Unable to create temporary test directory.');
         }
 
         $this->envFile = (string) tempnam($this->basePath, 'env_');
-        if (!file_put_contents($this->envFile, "APP_NAME=oezCMS\n") && !is_file($this->envFile)) {
-            $this->fail('Unable to create temporary env file.');
+        if (false === file_put_contents($this->envFile, "APP_NAME=oezCMS\n") && !is_file($this->envFile)) {
+            self::fail('Unable to create temporary env file.');
         }
 
         // Reset environment between tests
