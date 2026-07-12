@@ -11,10 +11,16 @@ use Throwable;
 
 final class Database
 {
+    private const string SAVEPOINT_PREFIX = 'oezcms_sp_';
     private int $transactionLevel = 0;
 
     public function __construct(private readonly PDO $connection)
     {
+    }
+
+    private function savepointName(int $level): string
+    {
+        return self::SAVEPOINT_PREFIX . $level;
     }
 
     /**
@@ -96,7 +102,7 @@ final class Database
             if (0 === $level) {
                 $this->connection->beginTransaction();
             } else {
-                $this->connection->exec(sprintf('SAVEPOINT oezcms_sp_%d', $level));
+                $this->connection->exec(sprintf('SAVEPOINT %s', $this->savepointName($level)));
             }
         } catch (PDOException $exception) {
             throw new DatabaseException(
@@ -113,7 +119,7 @@ final class Database
             if (0 === $level) {
                 $this->connection->commit();
             } else {
-                $this->connection->exec(sprintf('RELEASE SAVEPOINT oezcms_sp_%d', $level));
+                $this->connection->exec(sprintf('RELEASE SAVEPOINT %s', $this->savepointName($level)));
             }
         } catch (PDOException $exception) {
             throw new DatabaseException(
@@ -130,7 +136,7 @@ final class Database
             if (0 === $level) {
                 $this->connection->rollBack();
             } else {
-                $this->connection->exec(sprintf('ROLLBACK TO SAVEPOINT oezcms_sp_%d', $level));
+                $this->connection->exec(sprintf('ROLLBACK TO SAVEPOINT %s', $this->savepointName($level)));
             }
         } catch (PDOException) {
             // Keep the original failure as the propagating exception;
