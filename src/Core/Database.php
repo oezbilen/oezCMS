@@ -71,34 +71,70 @@ final class Database
     {
         $level = $this->transactionLevel;
 
-        if (0 === $level) {
-            $this->connection->beginTransaction();
-        } else {
-            $this->connection->exec(sprintf('SAVEPOINT oezcms_sp_%d', $level));
-        }
+        $this->beginOrSavepoint($level);
 
         ++$this->transactionLevel;
 
         try {
             $result = $callback($this);
 
+            $this->commitOrRelease($level);
+
+            return $result;
+        } catch (Throwable $exception) {
+            $this->rollBackOrToSavepoint($level);
+
+            throw $exception;
+        } finally {
+            --$this->transactionLevel;
+        }
+    }
+
+    private function beginOrSavepoint(int $level): void
+    {
+        try {
+            if (0 === $level) {
+                $this->connection->beginTransaction();
+            } else {
+                $this->connection->exec(sprintf('SAVEPOINT oezcms_sp_%d', $level));
+            }
+        } catch (PDOException $exception) {
+            throw new DatabaseException(
+                sprintf('Failed to start transaction: %s', $exception->getMessage()),
+                (int) $exception->getCode(),
+                $exception,
+            );
+        }
+    }
+
+    private function commitOrRelease(int $level): void
+    {
+        try {
             if (0 === $level) {
                 $this->connection->commit();
             } else {
                 $this->connection->exec(sprintf('RELEASE SAVEPOINT oezcms_sp_%d', $level));
             }
+        } catch (PDOException $exception) {
+            throw new DatabaseException(
+                sprintf('Failed to commit transaction: %s', $exception->getMessage()),
+                (int) $exception->getCode(),
+                $exception,
+            );
+        }
+    }
 
-            return $result;
-        } catch (Throwable $exception) {
+    private function rollBackOrToSavepoint(int $level): void
+    {
+        try {
             if (0 === $level) {
                 $this->connection->rollBack();
             } else {
                 $this->connection->exec(sprintf('ROLLBACK TO SAVEPOINT oezcms_sp_%d', $level));
             }
-
-            throw $exception;
-        } finally {
-            --$this->transactionLevel;
+        } catch (PDOException) {
+            // Keep the original failure as the propagating exception;
+            // a failed rollback must not mask why the transaction broke.
         }
     }
 
