@@ -54,7 +54,7 @@ final class Database
         $id = $this->connection->lastInsertId();
 
         if (false === $id) {
-            throw new DatabaseException('Unable to retrieve the last insert id.');
+            throw new DatabaseException(message: 'Unable to retrieve the last insert id.');
         }
 
         return $id;
@@ -100,9 +100,9 @@ final class Database
             }
         } catch (PDOException $exception) {
             throw new DatabaseException(
-                sprintf('Failed to start transaction: %s', $exception->getMessage()),
-                (int) $exception->getCode(),
-                $exception,
+                message: sprintf('Failed to start transaction: %s', $exception->getMessage()),
+                code: (int) $exception->getCode(),
+                previous: $exception,
             );
         }
     }
@@ -117,9 +117,9 @@ final class Database
             }
         } catch (PDOException $exception) {
             throw new DatabaseException(
-                sprintf('Failed to commit transaction: %s', $exception->getMessage()),
-                (int) $exception->getCode(),
-                $exception,
+                message: sprintf('Failed to commit transaction: %s', $exception->getMessage()),
+                code: (int) $exception->getCode(),
+                previous: $exception,
             );
         }
     }
@@ -147,7 +147,11 @@ final class Database
             $statement = $this->connection->prepare($sql);
 
             if (false === $statement) {
-                throw new DatabaseException(sprintf('Failed to prepare statement: %s', $sql));
+                throw new DatabaseException(
+                    message: sprintf('Failed to prepare statement: %s', $sql),
+                    sql: $sql,
+                    parameters: $parameters,
+                );
             }
 
             $statement->execute($parameters);
@@ -155,9 +159,11 @@ final class Database
             return $statement;
         } catch (PDOException $exception) {
             throw new DatabaseException(
-                sprintf('Database query failed: %s', $exception->getMessage()),
-                (int) $exception->getCode(),
-                $exception,
+                message: sprintf('Database query failed: %s', $exception->getMessage()),
+                sql: $sql,
+                parameters: $parameters,
+                code: (int) $exception->getCode(),
+                previous: $exception,
             );
         }
     }
