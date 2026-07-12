@@ -84,7 +84,7 @@ final class ApplicationTest extends TestCase
      */
     private function createCommand(string $name, ?callable $runner = null): Command
     {
-        return new class($name, $runner) implements Command {
+        return new class ($name, $runner) implements Command {
             /**
              * @param ?callable(Input, Output): ExitCode $runner
              */
