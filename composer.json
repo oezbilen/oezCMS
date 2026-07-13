@@ -19,7 +19,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": "^8.4",
+        "php": "^8.4.1",
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",
         "ext-json": "*",
@@ -39,7 +39,7 @@
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^11.5",
+        "phpunit/phpunit": "^13.2",
         "rector/rector": "^2.0"
     },
     "autoload": {

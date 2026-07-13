@@ -1,25 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/13.2/phpunit.xsd"
     bootstrap="vendor/autoload.php"
     colors="true"
     processIsolation="false"
     stopOnFailure="false"
     cacheDirectory=".phpunit.cache"
+    failOnWarning="true"
+    failOnRisky="true"
+    failOnDeprecation="true"
+    beStrictAboutOutputDuringTests="true"
+    displayDetailsOnTestsThatTriggerDeprecations="true"
+    displayDetailsOnTestsThatTriggerWarnings="true"
 >
     <testsuites>
-        <testsuite name="OezCMS Test Suite">
-            <directory>tests</directory>
+        <testsuite name="unit">
+            <directory suffix="Test.php">tests/Core</directory>
+            <directory suffix="Test.php">tests/Console</directory>
         </testsuite>
     </testsuites>
 
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_DEBUG" value="true"/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_DEBUG" value="true" force="true"/>
     </php>
 
     <source>
         <include>
-            <directory>src</directory>
+            <directory suffix=".php">src</directory>
+            <directory suffix=".php">plugins</directory>
+            <directory suffix=".php">public</directory>
         </include>
     </source>
 </phpunit>
