@@ -12,19 +12,19 @@ final class Application
     {
     }
 
-    public function run(Input $input, Output $output): ExitCode
+    public function run(Input $input, Output $output, Output $errorOutput): ExitCode
     {
         $name = $input->command();
 
         if (null === $name) {
-            $this->writeUsage($output);
+            $this->writeUsage($errorOutput);
 
             return ExitCode::Usage;
         }
 
         if (!$this->registry->has($name)) {
-            $output->writeLine(sprintf('Unknown command: %s', $name));
-            $this->writeUsage($output);
+            $errorOutput->writeLine(sprintf('Unknown command: %s', $name));
+            $this->writeUsage($errorOutput);
 
             return ExitCode::Usage;
         }
@@ -32,7 +32,7 @@ final class Application
         try {
             return $this->registry->get($name)->run($input, $output);
         } catch (Throwable $exception) {
-            $output->writeLine(sprintf('Error: %s', $exception->getMessage()));
+            $errorOutput->writeLine(sprintf('Error: %s', $exception->getMessage()));
 
             return ExitCode::Failure;
         }
