@@ -5,19 +5,11 @@ includes:
     - vendor/phpstan/phpstan-deprecation-rules/rules.neon
 
 parameters:
-    level: 9
+    level: 10
     paths:
         - bin
+        - bin/console
         - plugins
         - public
         - src
         - tests
-
-    excludePaths:
-        analyse:
-            - database/*
-            - docs/*
-            - vendor/*
-            - storage/*
-            - templates/*
-            - cache/*

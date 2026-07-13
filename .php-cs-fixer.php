@@ -21,7 +21,8 @@ $finder = Finder::create()
         'templates',
         'cache',
     ])
-    ->name('*.php');
+    ->name('*.php')
+    ->append([__DIR__ . '/bin/console']);
 
 return (new Config())
     ->setRiskyAllowed(true)
