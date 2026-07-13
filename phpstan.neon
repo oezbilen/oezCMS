@@ -8,16 +8,8 @@ parameters:
     level: 9
     paths:
         - bin
+        - bin/console
         - plugins
         - public
         - src
         - tests
-
-    excludePaths:
-        analyse:
-            - database/*
-            - docs/*
-            - vendor/*
-            - storage/*
-            - templates/*
-            - cache/*

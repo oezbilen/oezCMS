@@ -16,4 +16,5 @@ $registry->register(new VersionCommand());
 
 $application = new Application($registry);
 
-exit($application->run(Input::fromArgv(array_values($argv)), new StandardOutput())->value);
+/** @var list<string> $argv */
+exit($application->run(Input::fromArgv($argv), new StandardOutput())->value);
