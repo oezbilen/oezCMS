@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace OezCMS\Console;
 
+use OezCMS\Core\Version;
+
 final class VersionCommand implements Command
 {
-    private const string NAME = 'oezCMS';
-    private const string VERSION = '0.1.0-dev';
-
     public function name(): string
     {
         return 'version';
@@ -21,7 +20,7 @@ final class VersionCommand implements Command
 
     public function run(Input $input, Output $output): ExitCode
     {
-        $output->writeLine(sprintf('%s %s', self::NAME, self::VERSION));
+        $output->writeLine(Version::full());
 
         return ExitCode::Success;
     }
