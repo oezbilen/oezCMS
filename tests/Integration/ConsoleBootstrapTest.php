@@ -9,28 +9,32 @@ use Symfony\Component\Process\Process;
 
 final class ConsoleBootstrapTest extends TestCase
 {
-    public function testVersionCommandSucceeds(): void
+    public function testVersionCommandWritesToStdout(): void
     {
         $process = $this->runConsole(['version']);
 
         self::assertSame(0, $process->getExitCode());
         self::assertStringContainsString('oezCMS', $process->getOutput());
+        self::assertSame('', $process->getErrorOutput());
     }
 
-    public function testMissingCommandShowsUsage(): void
+    public function testMissingCommandWritesUsageToStderr(): void
     {
         $process = $this->runConsole([]);
 
         self::assertSame(2, $process->getExitCode());
-        self::assertStringContainsString('Usage:', $process->getOutput());
+        self::assertStringContainsString('Usage:', $process->getErrorOutput());
+        self::assertSame('', $process->getOutput());
     }
 
-    public function testUnknownCommandReportsAndExitsWithUsageCode(): void
+    public function testUnknownCommandWritesErrorToStderr(): void
     {
         $process = $this->runConsole(['nope']);
 
         self::assertSame(2, $process->getExitCode());
-        self::assertStringContainsString('Unknown command: nope', $process->getOutput());
+        self::assertStringContainsString('Unknown command: nope', $process->getErrorOutput());
+        self::assertStringContainsString('Usage:', $process->getErrorOutput());
+        self::assertSame('', $process->getOutput());
     }
 
     /**

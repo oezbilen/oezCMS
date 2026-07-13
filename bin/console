@@ -6,7 +6,7 @@ declare(strict_types=1);
 use OezCMS\Console\Application;
 use OezCMS\Console\CommandRegistry;
 use OezCMS\Console\Input;
-use OezCMS\Console\StandardOutput;
+use OezCMS\Console\StreamOutput;
 use OezCMS\Console\VersionCommand;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -17,4 +17,8 @@ $registry->register(new VersionCommand());
 $application = new Application($registry);
 
 /** @var list<string> $argv */
-exit($application->run(Input::fromArgv($argv), new StandardOutput())->value);
+exit($application->run(
+    Input::fromArgv($argv),
+    new StreamOutput(STDOUT),
+    new StreamOutput(STDERR),
+)->value);

@@ -29,11 +29,17 @@ final class ApplicationTest extends TestCase
         ));
         $application = new Application($registry);
         $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
 
-        $exitCode = $application->run(Input::fromArgv(['bin/console', 'greet', 'Alice']), $output);
+        $exitCode = $application->run(
+            Input::fromArgv(['bin/console', 'greet', 'Alice']),
+            $output,
+            $errorOutput,
+        );
 
         self::assertSame(ExitCode::Success, $exitCode);
         self::assertSame("Hello Alice\n", $output->contents());
+        self::assertSame('', $errorOutput->contents());
     }
 
     public function testReturnsUsageWhenNoCommandGiven(): void
@@ -42,23 +48,28 @@ final class ApplicationTest extends TestCase
         $registry->register($this->createCommand('greet'));
         $application = new Application($registry);
         $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
 
-        $exitCode = $application->run(Input::fromArgv(['bin/console']), $output);
+        $exitCode = $application->run(Input::fromArgv(['bin/console']), $output, $errorOutput);
 
         self::assertSame(ExitCode::Usage, $exitCode);
-        self::assertStringContainsString('Usage:', $output->contents());
-        self::assertStringContainsString('greet', $output->contents());
+        self::assertStringContainsString('Usage:', $errorOutput->contents());
+        self::assertStringContainsString('greet', $errorOutput->contents());
+        self::assertSame('', $output->contents());
     }
 
     public function testReturnsUsageForUnknownCommand(): void
     {
         $application = new Application(new CommandRegistry());
         $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
 
-        $exitCode = $application->run(Input::fromArgv(['bin/console', 'nope']), $output);
+        $exitCode = $application->run(Input::fromArgv(['bin/console', 'nope']), $output, $errorOutput);
 
         self::assertSame(ExitCode::Usage, $exitCode);
-        self::assertStringContainsString('Unknown command: nope', $output->contents());
+        self::assertStringContainsString('Unknown command: nope', $errorOutput->contents());
+        self::assertStringContainsString('Usage:', $errorOutput->contents());
+        self::assertSame('', $output->contents());
     }
 
     public function testTranslatesCommandExceptionIntoFailure(): void
@@ -72,11 +83,13 @@ final class ApplicationTest extends TestCase
         ));
         $application = new Application($registry);
         $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
 
-        $exitCode = $application->run(Input::fromArgv(['bin/console', 'broken']), $output);
+        $exitCode = $application->run(Input::fromArgv(['bin/console', 'broken']), $output, $errorOutput);
 
         self::assertSame(ExitCode::Failure, $exitCode);
-        self::assertStringContainsString('boom', $output->contents());
+        self::assertStringContainsString('boom', $errorOutput->contents());
+        self::assertSame('', $output->contents());
     }
 
     /**
