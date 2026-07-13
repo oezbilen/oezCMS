@@ -155,4 +155,29 @@ final class ConfigTest extends TestCase
 
         self::assertSame([], $config->getArray('missing'));
     }
+
+    public function testHasReturnsTrueForKeyExplicitlySetToNull(): void
+    {
+        $config = new Config(['feature' => null]);
+
+        self::assertTrue($config->has('feature'));
+    }
+
+    public function testHasReturnsTrueForNestedKeyExplicitlySetToNull(): void
+    {
+        $config = new Config([
+            'app' => [
+                'debug' => null,
+            ],
+        ]);
+
+        self::assertTrue($config->has('app.debug'));
+    }
+
+    public function testGetStringReturnsDefaultForNullValue(): void
+    {
+        $config = new Config(['feature' => null]);
+
+        self::assertSame('off', $config->getString('feature', 'off'));
+    }
 }

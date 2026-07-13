@@ -23,7 +23,10 @@ final class Config
 
     public function has(string $key): bool
     {
-        return null !== $this->resolve($key);
+        // Array destructuring: ignore the value and keep only the existence flag.
+        [$exists] = $this->find($key);
+
+        return $exists;
     }
 
     public function getInt(string $key, int $default = 0): int
@@ -53,16 +56,30 @@ final class Config
 
     private function resolve(string $key): mixed
     {
+        [, $value] = $this->find($key);
+
+        return $value;
+    }
+
+    /**
+     * Walks the dot-separated path and reports both whether the full
+     * path exists and the value found, so an explicit null value can be
+     * distinguished from a missing key.
+     *
+     * @return array{bool, mixed}
+     */
+    private function find(string $key): array
+    {
         $value = $this->items;
 
         foreach (explode('.', $key) as $segment) {
             if (!is_array($value) || !array_key_exists($segment, $value)) {
-                return null;
+                return [false, null];
             }
 
             $value = $value[$segment];
         }
 
-        return $value;
+        return [true, $value];
     }
 }
