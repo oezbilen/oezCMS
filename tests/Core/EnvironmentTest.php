@@ -12,6 +12,13 @@ final class EnvironmentTest extends TestCase
 {
     private string $basePath;
     private string $envFile;
+    private const array ENVIRONMENT_KEYS = [
+        'APP_NAME',
+        'APP_TITLE',
+        'APP_SECRET',
+        'FLAG',
+        'PORT',
+    ];
 
     protected function setUp(): void
     {
@@ -28,12 +35,13 @@ final class EnvironmentTest extends TestCase
         }
 
         // Reset environment between tests
-        unset($_ENV['APP_NAME']);
-        unset($_SERVER['APP_NAME']);
+        $this->clearEnvironment();
     }
 
     protected function tearDown(): void
     {
+        $this->clearEnvironment();
+
         if (is_file($this->envFile)) {
             unlink($this->envFile);
         }
@@ -43,6 +51,14 @@ final class EnvironmentTest extends TestCase
         }
 
         parent::tearDown();
+    }
+
+    private function clearEnvironment(): void
+    {
+        foreach (self::ENVIRONMENT_KEYS as $key) {
+            unset($_ENV[$key], $_SERVER[$key]);
+            putenv($key);
+        }
     }
 
     public function testLoadsEnvironmentFile(): void
@@ -99,8 +115,6 @@ final class EnvironmentTest extends TestCase
 
     public function testStripsSurroundingQuotesFromValues(): void
     {
-        unset($_ENV['APP_TITLE'], $_SERVER['APP_TITLE']);
-
         file_put_contents(
             $this->envFile,
             "APP_NAME=\"oezCMS\"\nAPP_TITLE='oez Content'\n",
@@ -115,8 +129,6 @@ final class EnvironmentTest extends TestCase
 
     public function testIgnoresLinesWithEmptyKey(): void
     {
-        unset($_ENV['APP_NAME'], $_SERVER['APP_NAME']);
-
         file_put_contents(
             $this->envFile,
             "=orphan\n   =whitespace\nAPP_NAME=oezCMS\n",
@@ -132,12 +144,6 @@ final class EnvironmentTest extends TestCase
 
     public function testStripsInlineComments(): void
     {
-        unset(
-            $_ENV['APP_NAME'], $_SERVER['APP_NAME'],
-            $_ENV['APP_SECRET'], $_SERVER['APP_SECRET'],
-            $_ENV['APP_TITLE'], $_SERVER['APP_TITLE'],
-        );
-
         file_put_contents(
             $this->envFile,
             "APP_NAME=oezCMS # inline comment\nAPP_SECRET=abc#123\nAPP_TITLE=\"oez # CMS\"\n",
@@ -169,7 +175,6 @@ final class EnvironmentTest extends TestCase
 
     public function testGetBoolReturnsTrueForTrueLikeValues(): void
     {
-        unset($_ENV['FLAG'], $_SERVER['FLAG']);
         file_put_contents($this->envFile, "FLAG=true\n");
 
         $environment = new Environment($this->envFile);
@@ -180,7 +185,6 @@ final class EnvironmentTest extends TestCase
 
     public function testGetBoolReturnsFalseForFalseLikeValues(): void
     {
-        unset($_ENV['FLAG'], $_SERVER['FLAG']);
         file_put_contents($this->envFile, "FLAG=false\n");
 
         $environment = new Environment($this->envFile);
@@ -191,7 +195,6 @@ final class EnvironmentTest extends TestCase
 
     public function testGetBoolReturnsDefaultForUnrecognizedValue(): void
     {
-        unset($_ENV['FLAG'], $_SERVER['FLAG']);
         file_put_contents($this->envFile, "FLAG=maybe\n");
 
         $environment = new Environment($this->envFile);
@@ -210,7 +213,6 @@ final class EnvironmentTest extends TestCase
 
     public function testGetIntReturnsValue(): void
     {
-        unset($_ENV['PORT'], $_SERVER['PORT']);
         file_put_contents($this->envFile, "PORT=8080\n");
 
         $environment = new Environment($this->envFile);
@@ -221,7 +223,6 @@ final class EnvironmentTest extends TestCase
 
     public function testGetIntReturnsDefaultForNonNumericValue(): void
     {
-        unset($_ENV['PORT'], $_SERVER['PORT']);
         file_put_contents($this->envFile, "PORT=not-a-number\n");
 
         $environment = new Environment($this->envFile);
@@ -236,5 +237,24 @@ final class EnvironmentTest extends TestCase
         $environment->load();
 
         self::assertSame(3306, $environment->getInt('DOES_NOT_EXIST', 3306));
+    }
+
+    public function testExportsVariablesToProcessEnvironment(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', getenv('APP_NAME'));
+    }
+
+    public function testDoesNotOverrideExistingProcessEnvironment(): void
+    {
+        putenv('APP_NAME=from-process-env');
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('from-process-env', getenv('APP_NAME'));
+        self::assertSame('from-process-env', $environment->get('APP_NAME'));
     }
 }

@@ -14,6 +14,14 @@ final class KernelTest extends TestCase
 {
     private string $basePath;
     private string $envFile;
+    private const array ENVIRONMENT_KEYS = [
+        'APP_ENV',
+        'APP_DEBUG',
+        'APP_NAME',
+        'DB_HOST',
+        'DB_PORT',
+        'DB_NAME',
+    ];
 
     protected function setUp(): void
     {
@@ -32,18 +40,13 @@ final class KernelTest extends TestCase
             self::fail('Unable to create temporary env file.');
         }
 
-        unset(
-            $_ENV['APP_ENV'], $_SERVER['APP_ENV'],
-            $_ENV['APP_DEBUG'], $_SERVER['APP_DEBUG'],
-            $_ENV['APP_NAME'], $_SERVER['APP_NAME'],
-            $_ENV['DB_HOST'], $_SERVER['DB_HOST'],
-            $_ENV['DB_PORT'], $_SERVER['DB_PORT'],
-            $_ENV['DB_NAME'], $_SERVER['DB_NAME'],
-        );
+        $this->clearEnvironment();
     }
 
     protected function tearDown(): void
     {
+        $this->clearEnvironment();
+
         if (is_file($this->envFile)) {
             unlink($this->envFile);
         }
@@ -53,6 +56,14 @@ final class KernelTest extends TestCase
         }
 
         parent::tearDown();
+    }
+
+    private function clearEnvironment(): void
+    {
+        foreach (self::ENVIRONMENT_KEYS as $key) {
+            unset($_ENV[$key], $_SERVER[$key]);
+            putenv($key);
+        }
     }
 
     public function testBootRegistersEnvironment(): void
