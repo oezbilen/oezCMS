@@ -27,4 +27,16 @@ final class DatabaseExceptionTest extends TestCase
         self::assertSame('SELECT id FROM users WHERE id = :id', $exception->getSql());
         self::assertSame(['id' => 7], $exception->getParameters());
     }
+
+    public function testDoesNotExposeParameterValuesInMessage(): void
+    {
+        $exception = new DatabaseException(
+            message: 'Database query failed: syntax error',
+            sql: 'SELECT * FROM users WHERE token = :token',
+            parameters: ['token' => 'super-secret-token'],
+        );
+
+        self::assertStringNotContainsString('super-secret-token', $exception->getMessage());
+        self::assertSame(['token' => 'super-secret-token'], $exception->getParameters());
+    }
 }
