@@ -271,4 +271,34 @@ final class EnvironmentTest extends TestCase
         self::assertSame('oezCMS', $environment->get('APP_NAME'));
         self::assertSame('oez Content', $environment->get('APP_TITLE'));
     }
+
+    public function testGetIntReturnsDefaultForDecimalValue(): void
+    {
+        file_put_contents($this->envFile, "PORT=3.14\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(3306, $environment->getInt('PORT', 3306));
+    }
+
+    public function testGetIntReturnsDefaultForExponentialValue(): void
+    {
+        file_put_contents($this->envFile, "PORT=1e3\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(3306, $environment->getInt('PORT', 3306));
+    }
+
+    public function testGetIntReturnsNegativeInteger(): void
+    {
+        file_put_contents($this->envFile, "PORT=-5\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame(-5, $environment->getInt('PORT'));
+    }
 }
