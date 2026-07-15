@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OezCMS\Tests\Core;
 
 use OezCMS\Core\Config;
+use OezCMS\Core\DatabaseException;
 use OezCMS\Core\PdoConnectionFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -43,5 +44,23 @@ final class PdoConnectionFactoryTest extends TestCase
             'mysql:host=127.0.0.1;port=3306;dbname=oezcms;charset=utf8mb4',
             $factory->dsn($config),
         );
+    }
+
+    public function testThrowsWhenDatabaseNameIsMissing(): void
+    {
+        $factory = new PdoConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn(new Config([]));
+    }
+
+    public function testThrowsWhenDatabaseNameIsEmpty(): void
+    {
+        $factory = new PdoConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn(new Config(['database' => ['name' => '']]));
     }
 }
