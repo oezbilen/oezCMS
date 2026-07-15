@@ -205,4 +205,19 @@ final class DatabaseTest extends TestCase
             self::assertSame(['id' => 1], $exception->getParameters());
         }
     }
+
+    public function testFailedQueryKeepsParameterValuesOutOfMessage(): void
+    {
+        try {
+            $this->database->fetchAll(
+                'SELECT id FROM users WHERE secret = :secret',
+                ['secret' => 'super-secret-token'],
+            );
+            self::fail('Expected DatabaseException was not thrown.');
+        } catch (DatabaseException $exception) {
+            self::assertStringNotContainsString('super-secret-token', $exception->getMessage());
+            self::assertSame('SELECT id FROM users WHERE secret = :secret', $exception->getSql());
+            self::assertSame(['secret' => 'super-secret-token'], $exception->getParameters());
+        }
+    }
 }
