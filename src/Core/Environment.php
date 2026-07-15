@@ -89,6 +89,12 @@ final class Environment
     private function stripInlineComment(string $value): string
     {
         if ('' !== $value && ('"' === $value[0] || "'" === $value[0])) {
+            $closing = strpos($value, $value[0], 1);
+
+            if (false !== $closing) {
+                return substr($value, 0, $closing + 1);
+            }
+
             return $value;
         }
 
