@@ -136,10 +136,12 @@ final class Environment
     {
         $value = $this->get($key);
 
-        if (null === $value || !is_numeric($value)) {
+        if (null === $value) {
             return $default;
         }
 
-        return (int) $value;
+        $integer = filter_var($value, FILTER_VALIDATE_INT);
+
+        return false === $integer ? $default : $integer;
     }
 }
