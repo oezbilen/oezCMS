@@ -53,8 +53,8 @@ final class Environment
                 continue;
             }
 
-            if (isset($_ENV[$key]) || isset($_SERVER[$key])) {
-                $existing = $_ENV[$key] ?? $_SERVER[$key];
+            if (isset($_ENV[$key]) || isset($_SERVER[$key]) || false !== getenv($key)) {
+                $existing = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
 
                 if (is_string($existing)) {
                     $this->variables[$key] = $existing;
@@ -66,6 +66,7 @@ final class Environment
             $this->variables[$key] = $value;
             $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
+            putenv(sprintf('%s=%s', $key, $value));
         }
     }
 
