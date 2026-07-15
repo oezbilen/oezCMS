@@ -257,4 +257,18 @@ final class EnvironmentTest extends TestCase
         self::assertSame('from-process-env', getenv('APP_NAME'));
         self::assertSame('from-process-env', $environment->get('APP_NAME'));
     }
+
+    public function testStripsInlineCommentAfterQuotedValue(): void
+    {
+        file_put_contents(
+            $this->envFile,
+            "APP_NAME=\"oezCMS\" # comment\nAPP_TITLE='oez Content' # note\n",
+        );
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('oezCMS', $environment->get('APP_NAME'));
+        self::assertSame('oez Content', $environment->get('APP_TITLE'));
+    }
 }
