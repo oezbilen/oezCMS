@@ -43,6 +43,8 @@ final class Container
     public function instance(string $id, object $instance): void
     {
         $this->instances[$id] = $instance;
+
+        unset($this->factories[$id]);
     }
 
     /**

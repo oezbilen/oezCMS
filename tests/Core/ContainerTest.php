@@ -8,6 +8,7 @@ use OezCMS\Core\Container;
 use OezCMS\Core\ContainerException;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+use WeakReference;
 
 final class ContainerTest extends TestCase
 {
@@ -104,5 +105,19 @@ final class ContainerTest extends TestCase
         $container->set(stdClass::class, static fn (): stdClass => $service);
 
         self::assertSame($service, $container->get(stdClass::class));
+    }
+
+    public function testInstanceReleasesPreviouslyRegisteredFactory(): void
+    {
+        $container = new Container();
+        $captured = new stdClass();
+        $reference = WeakReference::create($captured);
+
+        $container->set(stdClass::class, static fn (): stdClass => $captured);
+        $container->instance(stdClass::class, new stdClass());
+
+        unset($captured);
+
+        self::assertNull($reference->get());
     }
 }
