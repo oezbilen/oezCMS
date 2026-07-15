@@ -16,11 +16,17 @@ final class PdoConnectionFactory
 
     public function dsn(Config $config): string
     {
+        $name = $config->getString('database.name');
+
+        if ('' === $name) {
+            throw new DatabaseException('Missing required configuration: database.name');
+        }
+
         return sprintf(
             'mysql:host=%s;port=%d;dbname=%s;charset=%s',
             $config->getString('database.host', self::DEFAULT_HOST),
             $config->getInt('database.port', self::DEFAULT_PORT),
-            $config->getString('database.name'),
+            $name,
             $config->getString('database.charset', self::DEFAULT_CHARSET),
         );
     }
