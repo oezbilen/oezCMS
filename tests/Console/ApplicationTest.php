@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OezCMS\Tests\Console;
 
+use LogicException;
 use OezCMS\Console\Application;
 use OezCMS\Console\BufferedOutput;
 use OezCMS\Console\Command;
@@ -122,5 +123,58 @@ final class ApplicationTest extends TestCase
                 return null === $this->runner ? ExitCode::Success : ($this->runner)($input, $output);
             }
         };
+    }
+
+    private function brokenRegistry(): CommandRegistry
+    {
+        $registry = new CommandRegistry();
+        $registry->register($this->createCommand('broken', static function (): ExitCode {
+            throw new RuntimeException('boom');
+        }));
+
+        return $registry;
+    }
+
+    public function testDoesNotWriteDiagnosticsByDefault(): void
+    {
+        $application = new Application($this->brokenRegistry());
+        $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
+
+        $application->run(Input::fromArgv(['bin/console', 'broken']), $output, $errorOutput);
+
+        self::assertStringContainsString('boom', $errorOutput->contents());
+        self::assertStringNotContainsString(RuntimeException::class, $errorOutput->contents());
+        self::assertStringNotContainsString('#0', $errorOutput->contents());
+    }
+
+    public function testWritesDiagnosticsInDebugMode(): void
+    {
+        $application = new Application($this->brokenRegistry(), true);
+        $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
+
+        $exitCode = $application->run(Input::fromArgv(['bin/console', 'broken']), $output, $errorOutput);
+
+        self::assertSame(ExitCode::Failure, $exitCode);
+        self::assertStringContainsString('boom', $errorOutput->contents());
+        self::assertStringContainsString(RuntimeException::class, $errorOutput->contents());
+        self::assertStringContainsString('#0', $errorOutput->contents());
+    }
+
+    public function testWritesPreviousExceptionChainInDebugMode(): void
+    {
+        $registry = new CommandRegistry();
+        $registry->register($this->createCommand('broken', static function (): ExitCode {
+            throw new RuntimeException('outer', 0, new LogicException('inner cause'));
+        }));
+        $application = new Application($registry, true);
+        $output = new BufferedOutput();
+        $errorOutput = new BufferedOutput();
+
+        $application->run(Input::fromArgv(['bin/console', 'broken']), $output, $errorOutput);
+
+        self::assertStringContainsString('inner cause', $errorOutput->contents());
+        self::assertStringContainsString(LogicException::class, $errorOutput->contents());
     }
 }
