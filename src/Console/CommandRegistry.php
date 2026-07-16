@@ -13,7 +13,13 @@ final class CommandRegistry
 
     public function register(Command $command): void
     {
-        $this->commands[$command->name()] = $command;
+        $name = $command->name();
+
+        if (isset($this->commands[$name])) {
+            throw new ConsoleException(sprintf('Command already registered: %s', $name));
+        }
+
+        $this->commands[$name] = $command;
     }
 
     public function get(string $name): Command

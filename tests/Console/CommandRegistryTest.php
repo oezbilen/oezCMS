@@ -77,4 +77,14 @@ final class CommandRegistryTest extends TestCase
             }
         };
     }
+
+    public function testRegisterThrowsForDuplicateName(): void
+    {
+        $registry = new CommandRegistry();
+        $registry->register($this->createCommand('cache:clear'));
+
+        $this->expectException(ConsoleException::class);
+
+        $registry->register($this->createCommand('cache:clear'));
+    }
 }
