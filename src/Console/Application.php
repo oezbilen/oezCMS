@@ -8,8 +8,10 @@ use Throwable;
 
 final class Application
 {
-    public function __construct(private readonly CommandRegistry $registry)
-    {
+    public function __construct(
+        private readonly CommandRegistry $registry,
+        private readonly bool $debug = false,
+    ) {
     }
 
     public function run(Input $input, Output $output, Output $errorOutput): ExitCode
@@ -33,6 +35,11 @@ final class Application
             return $this->registry->get($name)->run($input, $output);
         } catch (Throwable $exception) {
             $errorOutput->writeLine(sprintf('Error: %s', $exception->getMessage()));
+
+            if ($this->debug) {
+                $errorOutput->writeLine('');
+                $errorOutput->writeLine((string) $exception);
+            }
 
             return ExitCode::Failure;
         }
