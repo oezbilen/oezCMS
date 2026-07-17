@@ -64,6 +64,8 @@
         "cs:fix": "php-cs-fixer fix --verbose",
         "analyse": "phpstan analyse --memory-limit=2G",
         "test": "phpunit --configuration phpunit.xml",
+        "test:unit": "phpunit --configuration phpunit.xml --testsuite unit",
+        "test:integration": "phpunit --configuration phpunit.xml --testsuite integration",
         "quality": [
             "@cs:check",
             "@analyse",
