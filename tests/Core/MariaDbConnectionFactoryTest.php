@@ -7,6 +7,7 @@ namespace OezCMS\Tests\Core;
 use OezCMS\Core\Config;
 use OezCMS\Core\DatabaseException;
 use OezCMS\Core\MariaDbConnectionFactory;
+use PDO;
 use PHPUnit\Framework\TestCase;
 
 final class MariaDbConnectionFactoryTest extends TestCase
@@ -62,5 +63,49 @@ final class MariaDbConnectionFactoryTest extends TestCase
         $this->expectException(DatabaseException::class);
 
         $factory->dsn(new Config(['database' => ['name' => '']]));
+    }
+
+    public function testOptionsDisableMultiStatementExecution(): void
+    {
+        $options = (new MariaDbConnectionFactory())->options();
+
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_MULTI_STATEMENTS, $options);
+        self::assertFalse($options[PDO::MYSQL_ATTR_MULTI_STATEMENTS]);
+    }
+
+    public function testOptionsConfigureSessionSqlMode(): void
+    {
+        $options = (new MariaDbConnectionFactory())->options();
+
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_INIT_COMMAND, $options);
+
+        $command = $options[PDO::MYSQL_ATTR_INIT_COMMAND];
+
+        self::assertIsString($command);
+
+        self::assertStringContainsString(
+            'sys.list_add',
+            $command,
+        );
+
+        self::assertStringContainsString(
+            '@@SESSION.sql_mode',
+            $command,
+        );
+
+        self::assertStringContainsString(
+            'ONLY_FULL_GROUP_BY',
+            $command,
+        );
+    }
+
+    public function testOptionsKeepSecurePdoDefaults(): void
+    {
+        $options = (new MariaDbConnectionFactory())->options();
+
+        self::assertSame(PDO::ERRMODE_EXCEPTION, $options[PDO::ATTR_ERRMODE]);
+        self::assertSame(PDO::FETCH_ASSOC, $options[PDO::ATTR_DEFAULT_FETCH_MODE]);
+        self::assertFalse($options[PDO::ATTR_EMULATE_PREPARES]);
+        self::assertFalse($options[PDO::ATTR_STRINGIFY_FETCHES]);
     }
 }

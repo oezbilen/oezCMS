@@ -14,6 +14,8 @@ final class MariaDbConnectionFactory
     private const string DEFAULT_USERNAME = 'root';
     private const string DEFAULT_PASSWORD = '';
 
+    private const string APPEND_SQL_MODE = 'sys.list_add(@@SESSION.sql_mode, \'ONLY_FULL_GROUP_BY\')';
+
     public function dsn(Config $config): string
     {
         $name = $config->getString('database.name');
@@ -31,18 +33,29 @@ final class MariaDbConnectionFactory
         );
     }
 
+    /**
+     * @return array<int, bool|int|string>
+     */
+    public function options(): array
+    {
+        return [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_STRINGIFY_FETCHES => false,
+            // Stacked queries are never legitimate in this code base.
+            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
+            PDO::MYSQL_ATTR_INIT_COMMAND => sprintf("SET SESSION sql_mode = '%s'", self::APPEND_SQL_MODE),
+        ];
+    }
+
     public function create(Config $config): PDO
     {
         return new PDO(
             $this->dsn($config),
             $config->getString('database.username', self::DEFAULT_USERNAME),
             $config->getString('database.password', self::DEFAULT_PASSWORD),
-            [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::ATTR_STRINGIFY_FETCHES => false,
-            ],
+            $this->options(),
         );
     }
 }
