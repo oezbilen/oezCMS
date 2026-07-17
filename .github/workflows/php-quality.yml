@@ -52,6 +52,22 @@ jobs:
     name: PHPUnit
     runs-on: ubuntu-latest
 
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: oezcms_test
+          MARIADB_USER: oezcms
+          MARIADB_PASSWORD: oezcms
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,6 +76,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: pdo_mysql, pdo_sqlite
           tools: composer:v2
 
       - name: Install dependencies
@@ -67,3 +84,9 @@ jobs:
 
       - name: Run PHPUnit
         run: composer test
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: '3306'
+          TEST_DB_NAME: oezcms_test
+          TEST_DB_USERNAME: oezcms
+          TEST_DB_PASSWORD: oezcms
