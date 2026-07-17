@@ -7,10 +7,12 @@ namespace OezCMS\Tests\Integration;
 use OezCMS\Core\Config;
 use OezCMS\Core\Database;
 use OezCMS\Core\MariaDbConnectionFactory;
+use PDO;
 use PHPUnit\Framework\TestCase;
 
 abstract class DatabaseIntegrationTestCase extends TestCase
 {
+    protected PDO $pdo;
     protected Database $database;
 
     protected function setUp(): void
@@ -18,7 +20,8 @@ abstract class DatabaseIntegrationTestCase extends TestCase
         parent::setUp();
 
         $factory = new MariaDbConnectionFactory();
-        $this->database = new Database($factory->create($this->createConfig()));
+        $this->pdo = $factory->create($this->createConfig());
+        $this->database = new Database($this->pdo);
     }
 
     private function createConfig(): Config
