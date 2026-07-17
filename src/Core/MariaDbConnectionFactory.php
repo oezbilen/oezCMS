@@ -14,8 +14,11 @@ final class MariaDbConnectionFactory
     private const string DEFAULT_USERNAME = 'root';
     private const string DEFAULT_PASSWORD = '';
 
-    private const string APPEND_SQL_MODE = 'SET SESSION sql_mode = '
-        . 'sys.list_add(@@SESSION.sql_mode, \'ONLY_FULL_GROUP_BY\')';
+    private const string SQL_MODE_INIT_COMMAND = 'SET SESSION sql_mode = IF('
+        . "FIND_IN_SET('ONLY_FULL_GROUP_BY', @@SESSION.sql_mode) > 0,"
+        . '@@SESSION.sql_mode,'
+        . "CONCAT_WS(',', NULLIF(@@SESSION.sql_mode, ''), 'ONLY_FULL_GROUP_BY')"
+        . ')';
 
     public function dsn(Config $config): string
     {
@@ -46,7 +49,7 @@ final class MariaDbConnectionFactory
             PDO::ATTR_STRINGIFY_FETCHES => false,
             // Stacked queries are never legitimate in this code base.
             PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => self::APPEND_SQL_MODE,
+            PDO::MYSQL_ATTR_INIT_COMMAND => self::SQL_MODE_INIT_COMMAND,
         ];
     }
 

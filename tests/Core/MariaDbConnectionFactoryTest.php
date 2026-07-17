@@ -73,7 +73,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
         self::assertFalse($options[PDO::MYSQL_ATTR_MULTI_STATEMENTS]);
     }
 
-    public function testOptionsConfigureSessionSqlMode(): void
+    public function testOptionsAppendOnlyFullGroupByToSessionSqlMode(): void
     {
         $options = (new MariaDbConnectionFactory())->options();
 
@@ -82,21 +82,9 @@ final class MariaDbConnectionFactoryTest extends TestCase
         $command = $options[PDO::MYSQL_ATTR_INIT_COMMAND];
 
         self::assertIsString($command);
-
-        self::assertStringContainsString(
-            'sys.list_add',
-            $command,
-        );
-
-        self::assertStringContainsString(
-            '@@SESSION.sql_mode',
-            $command,
-        );
-
-        self::assertStringContainsString(
-            'ONLY_FULL_GROUP_BY',
-            $command,
-        );
+        self::assertStringContainsString('CONCAT_WS', $command);
+        self::assertStringContainsString('@@SESSION.sql_mode', $command);
+        self::assertStringContainsString('ONLY_FULL_GROUP_BY', $command);
     }
 
     public function testOptionsKeepSecurePdoDefaults(): void
