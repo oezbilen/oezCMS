@@ -6,7 +6,7 @@ namespace OezCMS\Core;
 
 use PDO;
 
-final class PdoConnectionFactory
+final class MariaDbConnectionFactory
 {
     private const string DEFAULT_HOST = '127.0.0.1';
     private const int DEFAULT_PORT = 3306;

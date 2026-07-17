@@ -28,7 +28,7 @@ final class Kernel
         $container->instance(Config::class, $this->buildConfig($environment));
 
         $container->set(Database::class, static function (Container $container): Database {
-            $factory = new PdoConnectionFactory();
+            $factory = new MariaDbConnectionFactory();
 
             return new Database($factory->create($container->get(Config::class)));
         });
