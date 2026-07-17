@@ -241,4 +241,30 @@ final class DatabaseTest extends TestCase
 
         $this->database->callProcedure(str_repeat('a', 65));
     }
+
+    public function testExecuteRawRunsDdlStatement(): void
+    {
+        $this->database->executeRaw('CREATE TABLE raw_table (id INTEGER PRIMARY KEY, label TEXT)');
+
+        $this->database->execute('INSERT INTO raw_table (id, label) VALUES (:id, :label)', ['id' => 1, 'label' => 'raw']);
+
+        self::assertNotNull($this->database->fetchOne('SELECT id FROM raw_table WHERE id = :id', ['id' => 1]));
+    }
+
+    public function testExecuteRawReturnsAffectedRowCount(): void
+    {
+        self::assertSame(2, $this->database->executeRaw('DELETE FROM users'));
+    }
+
+    public function testExecuteRawWrapsPdoErrorsInDatabaseException(): void
+    {
+        try {
+            $this->database->executeRaw('NOT VALID SQL');
+            self::fail('Expected DatabaseException was not thrown.');
+        } catch (DatabaseException $exception) {
+            self::assertSame('NOT VALID SQL', $exception->getSql());
+            self::assertSame([], $exception->getParameters());
+            self::assertInstanceOf(PDOException::class, $exception->getPrevious());
+        }
+    }
 }
