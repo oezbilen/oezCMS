@@ -6,10 +6,10 @@ namespace OezCMS\Tests\Core;
 
 use OezCMS\Core\Config;
 use OezCMS\Core\DatabaseException;
-use OezCMS\Core\PdoConnectionFactory;
+use OezCMS\Core\MariaDbConnectionFactory;
 use PHPUnit\Framework\TestCase;
 
-final class PdoConnectionFactoryTest extends TestCase
+final class MariaDbConnectionFactoryTest extends TestCase
 {
     public function testBuildsDsnFromConfig(): void
     {
@@ -22,7 +22,7 @@ final class PdoConnectionFactoryTest extends TestCase
             ],
         ]);
 
-        $factory = new PdoConnectionFactory();
+        $factory = new MariaDbConnectionFactory();
 
         self::assertSame(
             'mysql:host=db.example.com;port=3307;dbname=oezcms;charset=utf8mb4',
@@ -38,7 +38,7 @@ final class PdoConnectionFactoryTest extends TestCase
             ],
         ]);
 
-        $factory = new PdoConnectionFactory();
+        $factory = new MariaDbConnectionFactory();
 
         self::assertSame(
             'mysql:host=127.0.0.1;port=3306;dbname=oezcms;charset=utf8mb4',
@@ -48,7 +48,7 @@ final class PdoConnectionFactoryTest extends TestCase
 
     public function testThrowsWhenDatabaseNameIsMissing(): void
     {
-        $factory = new PdoConnectionFactory();
+        $factory = new MariaDbConnectionFactory();
 
         $this->expectException(DatabaseException::class);
 
@@ -57,7 +57,7 @@ final class PdoConnectionFactoryTest extends TestCase
 
     public function testThrowsWhenDatabaseNameIsEmpty(): void
     {
-        $factory = new PdoConnectionFactory();
+        $factory = new MariaDbConnectionFactory();
 
         $this->expectException(DatabaseException::class);
 
