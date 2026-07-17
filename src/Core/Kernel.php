@@ -21,7 +21,10 @@ final class Kernel
     public function boot(): Container
     {
         $environment = new Environment($this->envFile);
-        $environment->load();
+
+        if (is_file($this->envFile)) {
+            $environment->load();
+        }
 
         $container = new Container();
         $container->instance(Environment::class, $environment);

@@ -107,4 +107,23 @@ final class KernelTest extends TestCase
 
         self::assertTrue($container->has(Database::class));
     }
+
+    public function testBootWithoutEnvFileStillBootsContainer(): void
+    {
+        $kernel = new Kernel($this->basePath . '/missing.env');
+
+        $container = $kernel->boot();
+
+        self::assertTrue($container->has(Database::class));
+        self::assertSame('production', $container->get(Config::class)->getString('app.env'));
+    }
+
+    public function testBootWithoutEnvFileReadsProcessEnvironment(): void
+    {
+        putenv('APP_ENV=staging');
+
+        $container = (new Kernel($this->basePath . '/missing.env'))->boot();
+
+        self::assertSame('staging', $container->get(Config::class)->getString('app.env'));
+    }
 }
