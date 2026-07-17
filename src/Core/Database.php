@@ -11,6 +11,7 @@ use Throwable;
 
 final class Database
 {
+    private const string IDENTIFIER_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/';
     private const string SAVEPOINT_PREFIX = 'oezcms_sp_';
     private int $transactionLevel = 0;
 
@@ -53,6 +54,62 @@ final class Database
     public function execute(string $sql, array $parameters = []): int
     {
         return $this->run($sql, $parameters)->rowCount();
+    }
+
+    /**
+     * @param  array<string, mixed>                   $parameters
+     * @return list<array<int, array<string, mixed>>>
+     */
+    public function callProcedure(string $procedure, array $parameters = []): array
+    {
+        if (1 !== preg_match(self::IDENTIFIER_PATTERN, $procedure)) {
+            throw new DatabaseException(message: sprintf('Invalid procedure name: %s', $procedure));
+        }
+
+        foreach (array_keys($parameters) as $key) {
+            if (1 !== preg_match(self::IDENTIFIER_PATTERN, $key)) {
+                throw new DatabaseException(message: sprintf('Invalid procedure parameter name: %s', $key));
+            }
+        }
+
+        $placeholders = implode(', ', array_map(
+            static fn (string $key): string => ':' . $key,
+            array_keys($parameters),
+        ));
+
+        $statement = $this->run(sprintf('CALL %s(%s)', $procedure, $placeholders), $parameters);
+        $resultSets = [];
+
+        try {
+            do {
+                /** @var array<int, array<string, mixed>> $rows */
+                $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+                $resultSets[] = $rows;
+            } while ($statement->nextRowset());
+
+            // PDO_MYSQL exposes the procedure completion packet as the final
+            // empty row set. It is removed by position because columnCount()
+            // does not identify it reliably across driver versions.
+            // The CALL always yields at least the final status row set, so the list
+            // is guaranteed to be non-empty here.
+            array_pop($resultSets);
+        } catch (PDOException $exception) {
+            throw new DatabaseException(
+                message: sprintf('Procedure call failed: %s', $exception->getMessage()),
+                sql: sprintf('CALL %s(%s)', $procedure, $placeholders),
+                parameters: $parameters,
+                code: (int) $exception->getCode(),
+                previous: $exception,
+            );
+        } finally {
+            try {
+                $statement->closeCursor();
+            } catch (PDOException) {
+                // Cleanup must not mask why the procedure call failed.
+            }
+        }
+
+        return $resultSets;
     }
 
     public function lastInsertId(): string

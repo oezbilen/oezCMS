@@ -220,4 +220,25 @@ final class DatabaseTest extends TestCase
             self::assertSame(['secret' => 'super-secret-token'], $exception->getParameters());
         }
     }
+
+    public function testCallProcedureRejectsInvalidProcedureName(): void
+    {
+        $this->expectException(DatabaseException::class);
+
+        $this->database->callProcedure('users; DROP TABLE users');
+    }
+
+    public function testCallProcedureRejectsInvalidParameterName(): void
+    {
+        $this->expectException(DatabaseException::class);
+
+        $this->database->callProcedure('valid_name', ['bad) OR (1' => 1]);
+    }
+
+    public function testCallProcedureRejectsOverlongProcedureName(): void
+    {
+        $this->expectException(DatabaseException::class);
+
+        $this->database->callProcedure(str_repeat('a', 65));
+    }
 }
