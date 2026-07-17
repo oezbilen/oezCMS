@@ -8,13 +8,19 @@ use OezCMS\Console\CommandRegistry;
 use OezCMS\Console\Input;
 use OezCMS\Console\StreamOutput;
 use OezCMS\Console\VersionCommand;
+use OezCMS\Core\Config;
+use OezCMS\Core\Kernel;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+
+$kernel = new Kernel(dirname(__DIR__) . '/.env');
+$container = $kernel->boot();
+$config = $container->get(Config::class);
 
 $registry = new CommandRegistry();
 $registry->register(new VersionCommand());
 
-$application = new Application($registry);
+$application = new Application($registry, $config->getBool('app.debug'));
 
 /** @var list<string> $argv */
 exit($application->run(
