@@ -109,7 +109,13 @@ final class Environment
 
     public function get(string $key): ?string
     {
-        return $this->variables[$key] ?? null;
+        if (isset($this->variables[$key])) {
+            return $this->variables[$key];
+        }
+
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+        return is_string($value) ? $value : null;
     }
 
     public function getString(string $key, string $default = ''): string

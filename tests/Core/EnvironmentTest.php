@@ -18,6 +18,8 @@ final class EnvironmentTest extends TestCase
         'APP_SECRET',
         'FLAG',
         'PORT',
+        'RUNTIME_ONLY',
+        'RUNTIME_FLAG',
     ];
 
     protected function setUp(): void
@@ -301,4 +303,43 @@ final class EnvironmentTest extends TestCase
 
         self::assertSame(-5, $environment->getInt('PORT'));
     }
+
+    public function testGetFallsBackToProcessEnvironmentForKeysNotInFile(): void
+    {
+        putenv('RUNTIME_ONLY=from-process');
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('from-process', $environment->get('RUNTIME_ONLY'));
+    }
+
+    public function testGetReadsProcessEnvironmentWithoutLoad(): void
+    {
+        putenv('RUNTIME_ONLY=from-process');
+
+        $environment = new Environment($this->envFile);
+
+        self::assertSame('from-process', $environment->get('RUNTIME_ONLY'));
+    }
+
+    public function testTypedGettersUseProcessEnvironmentFallback(): void
+    {
+        putenv('RUNTIME_FLAG=on');
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertTrue($environment->getBool('RUNTIME_FLAG'));
+    }
+
+    public function testGetReturnsNullForKeysMissingEverywhere(): void
+    {
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertNull($environment->get('RUNTIME_ONLY'));
+    }
+
+
 }
