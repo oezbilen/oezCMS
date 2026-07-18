@@ -57,6 +57,36 @@ final class Database
     }
 
     /**
+     * Executes a single raw SQL statement without preparing it.
+     *
+     * Intended for trusted DDL that cannot be executed through the prepared-
+     * statement protocol, such as CREATE OR REPLACE PROCEDURE. Multi-statements
+     * are disabled for this connection. Never interpolate user-controlled input.
+     */
+    public function executeRaw(string $sql): int
+    {
+        try {
+            $affectedRows = $this->connection->exec($sql);
+
+            if (false === $affectedRows) {
+                throw new DatabaseException(
+                    message: 'Failed to execute statement.',
+                    sql: $sql,
+                );
+            }
+
+            return $affectedRows;
+        } catch (PDOException $exception) {
+            throw new DatabaseException(
+                message: sprintf('Database statement failed: %s', $exception->getMessage()),
+                sql: $sql,
+                code: (int) $exception->getCode(),
+                previous: $exception,
+            );
+        }
+    }
+
+    /**
      * @param  array<string, mixed>                   $parameters
      * @return list<array<int, array<string, mixed>>>
      */
