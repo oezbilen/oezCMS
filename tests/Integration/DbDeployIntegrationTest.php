@@ -20,8 +20,11 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         parent::setUp();
 
         $this->databasePath = sys_get_temp_dir() . '/oezcms-deploy-integration-' . uniqid();
-        if (!mkdir($this->databasePath . '/routines', 0777, true)) {
-            self::fail('Unable to create temporary routines directory.');
+
+        foreach (['routines', 'migrations'] as $directory) {
+            if (!mkdir($this->databasePath . '/' . $directory, 0777, true)) {
+                self::fail(sprintf('Unable to create temporary %s directory.', $directory));
+            }
         }
     }
 
@@ -29,15 +32,19 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
     {
         if (isset($this->pdo)) {
             $this->pdo->exec('DROP PROCEDURE IF EXISTS test_deployed_procedure');
+            $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table');
+            $this->pdo->exec('DROP TABLE IF EXISTS oezcms_migration');
         }
 
-        $files = glob($this->databasePath . '/routines/*.sql');
+        $files = glob($this->databasePath . '/*/*.sql');
         foreach (false === $files ? [] : $files as $file) {
             unlink($file);
         }
 
-        if (is_dir($this->databasePath . '/routines')) {
-            rmdir($this->databasePath . '/routines');
+        foreach ([$this->databasePath . '/routines', $this->databasePath . '/migrations'] as $directory) {
+            if (is_dir($directory)) {
+                rmdir($directory);
+            }
         }
 
         if (is_dir($this->databasePath)) {
@@ -71,6 +78,15 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         return $command->run(Input::fromArgv(['console', 'db:deploy']), $output);
     }
 
+    private function writeMigrationFile(): void
+    {
+        $sql = 'CREATE TABLE test_migration_table (id INT NOT NULL PRIMARY KEY)';
+
+        if (false === file_put_contents($this->databasePath . '/migrations/001_create_table.sql', $sql)) {
+            self::fail('Unable to write migration file.');
+        }
+    }
+
     public function testDeploysProcedureThatIsCallableRightAway(): void
     {
         $this->writeProcedureFile();
@@ -91,5 +107,33 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
 
         self::assertSame(ExitCode::Success, $this->runCommand(new BufferedOutput()));
         self::assertSame(ExitCode::Success, $this->runCommand(new BufferedOutput()));
+    }
+
+    public function testAppliesMigrationOnMariaDb(): void
+    {
+        $this->writeMigrationFile();
+
+        $output = new BufferedOutput();
+        $exitCode = $this->runCommand($output);
+
+        self::assertSame(ExitCode::Success, $exitCode);
+        self::assertStringContainsString('Applied migrations/001_create_table.sql', $output->contents());
+        self::assertSame(1, $this->database->execute(
+            'INSERT INTO test_migration_table (id) VALUES (:id)',
+            ['id' => 1],
+        ));
+    }
+
+    public function testRerunningMigrationsIsIdempotent(): void
+    {
+        $this->writeMigrationFile();
+
+        $first = new BufferedOutput();
+        self::assertSame(ExitCode::Success, $this->runCommand($first));
+        self::assertStringContainsString('Applied migrations/001_create_table.sql', $first->contents());
+
+        $output = new BufferedOutput();
+        self::assertSame(ExitCode::Success, $this->runCommand($output));
+        self::assertSame("Deployed 0 object(s).\n", $output->contents());
     }
 }
