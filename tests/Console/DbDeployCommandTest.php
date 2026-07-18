@@ -146,4 +146,83 @@ final class DbDeployCommandTest extends TestCase
         self::assertSame('db:deploy', $command->name());
         self::assertNotSame('', $command->description());
     }
+
+    public function testAppliesMigrationsBeforeObjectDirectories(): void
+    {
+        $this->writeSqlFile('views/mig_names.sql', 'CREATE VIEW mig_names AS SELECT name FROM mig_users');
+        $this->writeSqlFile('migrations/001_create_users.sql', 'CREATE TABLE mig_users (id INTEGER PRIMARY KEY, name TEXT)');
+
+        $output = new BufferedOutput();
+        $exitCode = $this->runCommand($this->container, $this->databasePath, $output);
+
+        self::assertSame(ExitCode::Success, $exitCode);
+        self::assertSame(
+            "Applied migrations/001_create_users.sql\nApplied views/mig_names.sql\nDeployed 2 object(s).\n",
+            $output->contents(),
+        );
+    }
+
+    public function testRecordsAppliedMigrations(): void
+    {
+        $this->writeSqlFile('migrations/001_create_users.sql', 'CREATE TABLE mig_users (id INTEGER PRIMARY KEY)');
+
+        $this->runCommand($this->container, $this->databasePath, new BufferedOutput());
+
+        self::assertNotNull($this->database->fetchOne(
+            'SELECT migration FROM oezcms_migration WHERE migration = :migration',
+            ['migration' => '001_create_users.sql'],
+        ));
+    }
+
+    public function testSkipsAlreadyAppliedMigrations(): void
+    {
+        $this->writeSqlFile('migrations/001_create_users.sql', 'CREATE TABLE mig_users (id INTEGER PRIMARY KEY)');
+
+        $first = new BufferedOutput();
+        $this->runCommand($this->container, $this->databasePath, $first);
+        self::assertSame("Applied migrations/001_create_users.sql\nDeployed 1 object(s).\n", $first->contents());
+
+        $output = new BufferedOutput();
+        $exitCode = $this->runCommand($this->container, $this->databasePath, $output);
+
+        self::assertSame(ExitCode::Success, $exitCode);
+        self::assertSame("Deployed 0 object(s).\n", $output->contents());
+    }
+
+    public function testAppliesOnlyPendingMigrations(): void
+    {
+        $this->writeSqlFile('migrations/001_create_users.sql', 'CREATE TABLE mig_users (id INTEGER PRIMARY KEY)');
+        $this->runCommand($this->container, $this->databasePath, new BufferedOutput());
+
+        $this->writeSqlFile('migrations/002_seed_users.sql', 'INSERT INTO mig_users (id) VALUES (1)');
+
+        $output = new BufferedOutput();
+        $this->runCommand($this->container, $this->databasePath, $output);
+
+        self::assertSame("Applied migrations/002_seed_users.sql\nDeployed 1 object(s).\n", $output->contents());
+        self::assertNotNull($this->database->fetchOne('SELECT id FROM mig_users WHERE id = :id', ['id' => 1]));
+    }
+
+    public function testStopsAtFirstFailingMigration(): void
+    {
+        $this->writeSqlFile('migrations/001_create_users.sql', 'CREATE TABLE mig_users (id INTEGER PRIMARY KEY)');
+        $this->writeSqlFile('migrations/002_broken.sql', 'NOT VALID SQL');
+        $this->writeSqlFile('migrations/003_seed_users.sql', 'INSERT INTO mig_users (id) VALUES (1)');
+
+        try {
+            $this->runCommand($this->container, $this->databasePath, new BufferedOutput());
+            self::fail('Expected DatabaseException was not thrown.');
+        } catch (DatabaseException) {
+            // The deploy stops here; the assertions below pin the partial state.
+        }
+
+        self::assertNotNull($this->database->fetchOne(
+            'SELECT migration FROM oezcms_migration WHERE migration = :migration',
+            ['migration' => '001_create_users.sql'],
+        ));
+        self::assertNull($this->database->fetchOne(
+            'SELECT migration FROM oezcms_migration WHERE migration = :migration',
+            ['migration' => '003_seed_users.sql'],
+        ));
+    }
 }
