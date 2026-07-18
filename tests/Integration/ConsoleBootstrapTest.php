@@ -47,4 +47,11 @@ final class ConsoleBootstrapTest extends TestCase
 
         return $process;
     }
+
+    public function testUsageListsDbDeployCommand(): void
+    {
+        $process = $this->runConsole([]);
+
+        self::assertStringContainsString('db:deploy', $process->getErrorOutput());
+    }
 }
