@@ -11,6 +11,7 @@ use OezCMS\Console\ExitCode;
 use OezCMS\Console\Input;
 use OezCMS\Core\Container;
 use OezCMS\Core\Database;
+use OezCMS\Core\DatabaseException;
 use OezCMS\Core\MariaDbConnectionFactory;
 
 final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
@@ -23,7 +24,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
 
         $this->databasePath = sys_get_temp_dir() . '/oezcms-deploy-integration-' . uniqid();
 
-        foreach (['routines', 'migrations'] as $directory) {
+        foreach (['migrations', 'routines', 'views', 'triggers'] as $directory) {
             if (!mkdir($this->databasePath . '/' . $directory, 0777, true)) {
                 self::fail(sprintf('Unable to create temporary %s directory.', $directory));
             }
@@ -34,6 +35,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
     {
         if (isset($this->pdo)) {
             $this->pdo->exec('DROP PROCEDURE IF EXISTS test_deployed_procedure');
+            $this->pdo->exec('DROP VIEW IF EXISTS test_migration_view');
             $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table');
             $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table_two');
             $this->pdo->exec('DROP TABLE IF EXISTS oezcms_migration');
@@ -44,9 +46,10 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
             unlink($file);
         }
 
-        foreach ([$this->databasePath . '/routines', $this->databasePath . '/migrations'] as $directory) {
-            if (is_dir($directory)) {
-                rmdir($directory);
+        foreach (['migrations', 'routines', 'views', 'triggers'] as $directory) {
+            $path = $this->databasePath . '/' . $directory;
+            if (is_dir($path)) {
+                rmdir($path);
             }
         }
 
@@ -55,6 +58,13 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         }
 
         parent::tearDown();
+    }
+
+    private function writeObjectFile(string $directory, string $filename, string $sql): void
+    {
+        if (false === file_put_contents($this->databasePath . '/' . $directory . '/' . $filename, $sql)) {
+            self::fail(sprintf('Unable to write %s/%s.', $directory, $filename));
+        }
     }
 
     private function writeProcedureFile(): void
@@ -313,5 +323,72 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         } finally {
             $blocker->query("SELECT RELEASE_LOCK(CONCAT('oezcms_db_deploy_', DATABASE()))");
         }
+    }
+
+    public function testAppliesDirectoriesInDependencyOrder(): void
+    {
+        $this->writeMigrationFile(
+            '001_create_table.sql',
+            'CREATE TABLE test_migration_table (id INT NOT NULL PRIMARY KEY)',
+        );
+        $this->writeProcedureFile();
+        $this->writeObjectFile(
+            'views',
+            'test_migration_view.sql',
+            'CREATE OR REPLACE VIEW test_migration_view AS SELECT id FROM test_migration_table',
+        );
+        $this->writeObjectFile(
+            'triggers',
+            'test_migration_trigger.sql',
+            'CREATE OR REPLACE TRIGGER test_migration_trigger BEFORE INSERT ON test_migration_table'
+            . ' FOR EACH ROW SET @test_migration_trigger := 1',
+        );
+
+        $output = new BufferedOutput();
+        self::assertSame(ExitCode::Success, $this->runCommand($output));
+        self::assertSame(
+            "Applied migrations/001_create_table.sql\n"
+            . "Applied routines/test_deployed_procedure.sql\n"
+            . "Applied views/test_migration_view.sql\n"
+            . "Applied triggers/test_migration_trigger.sql\n"
+            . "Deployed 4 object(s).\n",
+            $output->contents(),
+        );
+    }
+
+    public function testStopsAtFirstFailingMigration(): void
+    {
+        $this->writeMigrationFile(
+            '001_create_table.sql',
+            'CREATE TABLE test_migration_table (id INT NOT NULL PRIMARY KEY)',
+        );
+        $this->writeMigrationFile('002_broken.sql', 'NOT VALID SQL');
+        $this->writeMigrationFile(
+            '003_seed.sql',
+            'INSERT INTO test_migration_table (id) VALUES (1)',
+        );
+
+        try {
+            $this->runCommand(new BufferedOutput());
+            self::fail('Expected the broken migration to abort the deploy.');
+        } catch (ConsoleException $exception) {
+            self::assertStringContainsString('002_broken.sql', $exception->getMessage());
+        }
+
+        self::assertSame('completed', $this->trackingRow('001_create_table.sql')['status']);
+        self::assertSame('failed', $this->trackingRow('002_broken.sql')['status']);
+        self::assertNull($this->database->fetchOne(
+            'SELECT migration FROM oezcms_migration WHERE migration = :migration',
+            ['migration' => '003_seed.sql'],
+        ));
+    }
+
+    public function testPropagatesObjectFailures(): void
+    {
+        $this->writeObjectFile('routines', 'broken.sql', 'NOT VALID SQL');
+
+        $this->expectException(DatabaseException::class);
+
+        $this->runCommand(new BufferedOutput());
     }
 }
