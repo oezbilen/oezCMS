@@ -24,7 +24,7 @@ abstract class DatabaseIntegrationTestCase extends TestCase
         $this->database = new Database($this->pdo);
     }
 
-    private function createConfig(): Config
+    protected function createConfig(): Config
     {
         return new Config([
             'database' => [
