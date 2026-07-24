@@ -334,4 +334,100 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
             ['code' => 'xz', 'english_name' => 'xz', 'native_name' => 'xz'],
         );
     }
+
+    public function testEnglishIsTheSeededDefault(): void
+    {
+        $rows = $this->database->fetchAll('SELECT code FROM locales WHERE is_default = TRUE');
+
+        self::assertSame([['code' => 'en']], $rows);
+    }
+
+    public function testSecondDefaultLocaleIsRejected(): void
+    {
+        $this->createLocale('xa');
+
+        // Reading the new column makes this fail on the missing schema in RED,
+        // so the expectException below cannot pass for the wrong reason.
+        $defaults = $this->database->fetchAll('SELECT code FROM locales WHERE is_default = TRUE');
+        self::assertSame([['code' => 'en']], $defaults);
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'UPDATE locales SET is_default = TRUE WHERE code = :code',
+            ['code' => 'xa'],
+        );
+    }
+
+    public function testDefaultLocaleMustStayActive(): void
+    {
+        $defaults = $this->database->fetchAll('SELECT code FROM locales WHERE is_default = TRUE');
+        self::assertSame([['code' => 'en']], $defaults);
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'UPDATE locales SET is_active = FALSE WHERE code = :code',
+            ['code' => 'en'],
+        );
+    }
+
+    public function testDefaultLocaleCannotBeDeleted(): void
+    {
+        // Make a reference-free locale the default so the foreign key does not
+        // stand in for the delete trigger under test.
+        $this->createLocale('xa');
+        $this->database->execute('UPDATE locales SET is_default = FALSE WHERE is_default = TRUE');
+        $this->database->execute(
+            'UPDATE locales SET is_default = TRUE WHERE code = :code',
+            ['code' => 'xa'],
+        );
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute('DELETE FROM locales WHERE code = :code', ['code' => 'xa']);
+    }
+
+    public function testSetDefaultLocaleSwitchesDefault(): void
+    {
+        $this->database->callProcedure('sp_i18n_set_default_locale', ['code' => 'de']);
+
+        $rows = $this->database->fetchAll('SELECT code FROM locales WHERE is_default = TRUE');
+        self::assertSame([['code' => 'de']], $rows);
+    }
+
+    public function testSetDefaultLocaleRejectsInactiveLocale(): void
+    {
+        $defaults = $this->database->fetchAll('SELECT code FROM locales WHERE is_default = TRUE');
+        self::assertSame([['code' => 'en']], $defaults);
+
+        $this->expectException(DatabaseException::class);
+
+        // fr is seeded but inactive.
+        $this->database->callProcedure('sp_i18n_set_default_locale', ['code' => 'fr']);
+    }
+
+    public function testTranslateUsesSwitchedDefaultLocale(): void
+    {
+        $this->createLocale('xa'); // active, no fallback, no translation, not default
+        $keyId = $this->createTranslationKey('core', 'welcome');
+        $this->addTranslation($keyId, 'de', 'Willkommen');
+
+        $this->database->callProcedure('sp_i18n_set_default_locale', ['code' => 'de']);
+
+        // xa has no value and no chain, so resolution falls through to the
+        // default locale — now German, not the previously hardcoded English.
+        self::assertSame('Willkommen', $this->translate('core', 'welcome', 'xa'));
+    }
+
+    public function testTranslateWithoutDefaultReturnsKey(): void
+    {
+        $this->createLocale('xa');
+        $keyId = $this->createTranslationKey('core', 'welcome');
+        $this->addTranslation($keyId, 'de', 'Willkommen');
+
+        $this->database->execute('UPDATE locales SET is_default = FALSE WHERE is_default = TRUE');
+
+        self::assertSame('core.welcome', $this->translate('core', 'welcome', 'xa'));
+    }
 }
