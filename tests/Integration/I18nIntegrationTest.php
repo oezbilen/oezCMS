@@ -158,16 +158,46 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         self::assertSame('core.missing', $this->translate('core', 'missing', 'de'));
     }
 
-    public function testTranslateSurvivesFallbackCycle(): void
+    public function testTranslateStopsAfterThreeLocales(): void
+    {
+        // A legitimate chain deeper than the read cap: xa -> xb -> xc -> xd,
+        // with the value only on the fourth locale. Translation must stop after
+        // three locales and never reach it — the guarantee that keeps any
+        // pathological chain from looping.
+        $this->createLocale('xd');
+        $this->createLocale('xc', $this->localeId('xd'));
+        $this->createLocale('xb', $this->localeId('xc'));
+        $this->createLocale('xa', $this->localeId('xb'));
+
+        $keyId = $this->createTranslationKey('core', 'deep');
+        $this->addTranslation($keyId, 'xd', 'Too deep');
+
+        self::assertSame('core.deep', $this->translate('core', 'deep', 'xa'));
+    }
+
+    public function testAllowsLegitimateChainExtensionOnUpdate(): void
     {
         $this->createLocale('xa');
-        $this->createLocale('xb', $this->localeId('xa'));
+        $this->createLocale('xb');
+        $this->createLocale('xc');
+
+        // Each update extends an acyclic chain (xb -> xa, then xc -> xb); the
+        // cycle guard must walk them without rejecting a legitimate chain.
         $this->database->execute(
-            'UPDATE locales SET fallback_locale_id = :fallback_locale_id WHERE code = :code',
-            ['fallback_locale_id' => $this->localeId('xb'), 'code' => 'xa'],
+            'UPDATE locales SET fallback_locale_id = :fb WHERE code = :code',
+            ['fb' => $this->localeId('xa'), 'code' => 'xb'],
+        );
+        $this->database->execute(
+            'UPDATE locales SET fallback_locale_id = :fb WHERE code = :code',
+            ['fb' => $this->localeId('xb'), 'code' => 'xc'],
         );
 
-        self::assertSame('core.missing', $this->translate('core', 'missing', 'xa'));
+        $row = $this->database->fetchOne(
+            'SELECT fallback_locale_id FROM locales WHERE code = :code',
+            ['code' => 'xc'],
+        );
+        self::assertNotNull($row);
+        self::assertSame($this->localeId('xb'), $row['fallback_locale_id']);
     }
 
     public function testTranslateIgnoresSoftDeletedKeys(): void
@@ -263,5 +293,45 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
 
         self::assertNotNull($row);
         self::assertSame(1, $row['resolved']);
+    }
+
+    public function testRejectsTwoNodeFallbackCycle(): void
+    {
+        $this->createLocale('xa');
+        $this->createLocale('xb', $this->localeId('xa'));
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'UPDATE locales SET fallback_locale_id = :fallback_locale_id WHERE code = :code',
+            ['fallback_locale_id' => $this->localeId('xb'), 'code' => 'xa'],
+        );
+    }
+
+    public function testRejectsThreeNodeFallbackCycle(): void
+    {
+        $this->createLocale('xa');
+        $this->createLocale('xb', $this->localeId('xa'));
+        $this->createLocale('xc', $this->localeId('xb'));
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'UPDATE locales SET fallback_locale_id = :fallback_locale_id WHERE code = :code',
+            ['fallback_locale_id' => $this->localeId('xc'), 'code' => 'xa'],
+        );
+    }
+
+    public function testRejectsSelfFallbackOnInsert(): void
+    {
+        // The foreign key accepts a row referencing its own id, so a
+        // self-referencing insert needs a BEFORE INSERT trigger of its own.
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'INSERT INTO locales (id, code, english_name, native_name, fallback_locale_id, sort_order)
+                VALUES (900, :code, :english_name, :native_name, 900, 99)',
+            ['code' => 'xz', 'english_name' => 'xz', 'native_name' => 'xz'],
+        );
     }
 }
