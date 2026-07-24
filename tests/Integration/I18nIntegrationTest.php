@@ -264,4 +264,44 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         self::assertNotNull($row);
         self::assertSame(1, $row['resolved']);
     }
+
+    public function testRejectsTwoNodeFallbackCycle(): void
+    {
+        $this->createLocale('xa');
+        $this->createLocale('xb', $this->localeId('xa'));
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'UPDATE locales SET fallback_locale_id = :fallback_locale_id WHERE code = :code',
+            ['fallback_locale_id' => $this->localeId('xb'), 'code' => 'xa'],
+        );
+    }
+
+    public function testRejectsThreeNodeFallbackCycle(): void
+    {
+        $this->createLocale('xa');
+        $this->createLocale('xb', $this->localeId('xa'));
+        $this->createLocale('xc', $this->localeId('xb'));
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'UPDATE locales SET fallback_locale_id = :fallback_locale_id WHERE code = :code',
+            ['fallback_locale_id' => $this->localeId('xc'), 'code' => 'xa'],
+        );
+    }
+
+    public function testRejectsSelfFallbackOnInsert(): void
+    {
+        // The foreign key accepts a row referencing its own id, so a
+        // self-referencing insert needs a BEFORE INSERT trigger of its own.
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'INSERT INTO locales (id, code, english_name, native_name, fallback_locale_id, sort_order)
+                VALUES (900, :code, :english_name, :native_name, 900, 99)',
+            ['code' => 'xz', 'english_name' => 'xz', 'native_name' => 'xz'],
+        );
+    }
 }
