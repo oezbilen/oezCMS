@@ -3,7 +3,8 @@
 --
 -- Defines the available locales used by the translation system.
 -- Supports locale fallback chains for missing translations.
--- Fallback cycles are prevented by database constraints and application logic.
+-- Fallback cycles are rejected by write-time triggers on locales
+-- reads additionally cap the traversal depth.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE TABLE locales (
@@ -32,4 +33,5 @@ CREATE TABLE locales (
         ON DELETE RESTRICT
         ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci
-  COMMENT='Available locales; fallback cycles are prevented by database and application logic';
+  COMMENT='Available locales; fallback cycles rejected by write-time triggers, chain
+   depth capped on read';
