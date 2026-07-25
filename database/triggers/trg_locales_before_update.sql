@@ -1,5 +1,5 @@
 -- -------------------------------------------------------------------------------------------------
--- Prevent Locale Fallback Cycles
+-- Enforce Locale Invariants On Update
 --
 -- Rejects a fallback that would make a locale its own fallback, either directly
 -- (a -> a) or by closing a longer chain (a -> b -> a). The chain starting at the
@@ -7,8 +7,9 @@
 -- change forms a cycle and is rejected. A hop cap terminates the walk on
 -- unexpectedly deep chains or pre-existing cyclic data.
 --
--- Reads additionally cap their traversal depth (fn_i18n_translate) as an
--- unconditional termination guarantee, independent of how the data was produced.
+-- The default locale must stay active so it can always serve as the last-resort
+-- fallback. Reads additionally cap their traversal depth (fn_i18n_translate) as
+-- an unconditional termination guarantee, independent of how data was produced.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE TRIGGER trg_locales_before_update
@@ -17,6 +18,11 @@ FOR EACH ROW
 BEGIN
     DECLARE v_current SMALLINT UNSIGNED;
     DECLARE v_hops SMALLINT UNSIGNED DEFAULT 0;
+
+    IF NEW.is_default AND NOT NEW.is_active THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The default locale must stay active';
+    END IF;
 
     IF NEW.fallback_locale_id IS NOT NULL AND NEW.fallback_locale_id = NEW.id THEN
         SIGNAL SQLSTATE '45000'
