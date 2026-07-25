@@ -287,7 +287,7 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         $this->createLocale('de-at', $this->localeId('de'));
 
         $row = $this->database->fetchOne(
-            'SELECT fn_i18n_locale_resolve(:id, 3) AS resolved',
+            'SELECT fn_i18n_locale_resolve(:id) AS resolved',
             ['id' => $this->localeId('de-at')],
         );
 
@@ -462,5 +462,81 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
 
         self::assertNotNull($row);
         self::assertSame('xd', $row['code']);
+    }
+
+    public function testMaxDepthIsThree(): void
+    {
+        $row = $this->database->fetchOne('SELECT fn_i18n_max_depth() AS max_depth');
+
+        self::assertNotNull($row);
+        self::assertSame(3, $row['max_depth']);
+    }
+
+    public function testLocaleChainListsRequestedLocaleFirst(): void
+    {
+        $this->createLocale('de-at', $this->localeId('de'));
+
+        $rows = $this->database->fetchAll(
+            'SELECT l.code, c.depth
+                FROM v_i18n_locale_chains AS c
+                JOIN locales AS l ON l.id = c.locale_id
+                WHERE c.root_locale_id = :root
+                ORDER BY c.depth',
+            ['root' => $this->localeId('de-at')],
+        );
+
+        self::assertSame(
+            [
+                ['code' => 'de-at', 'depth' => 1],
+                ['code' => 'de', 'depth' => 2],
+                ['code' => 'en', 'depth' => 3],
+            ],
+            $rows,
+        );
+    }
+
+    public function testLocaleChainCapsDepthAtMaxDepth(): void
+    {
+        // xa -> xb -> xc -> xd is one hop deeper than the cap; xd must not appear,
+        // which is what keeps any pathological chain from being walked forever.
+        $this->createLocale('xd');
+        $this->createLocale('xc', $this->localeId('xd'));
+        $this->createLocale('xb', $this->localeId('xc'));
+        $this->createLocale('xa', $this->localeId('xb'));
+
+        $rows = $this->database->fetchAll(
+            'SELECT l.code
+                FROM v_i18n_locale_chains AS c
+                JOIN locales AS l ON l.id = c.locale_id
+                WHERE c.root_locale_id = :root
+                ORDER BY c.depth',
+            ['root' => $this->localeId('xa')],
+        );
+
+        self::assertSame([['code' => 'xa'], ['code' => 'xb'], ['code' => 'xc']], $rows);
+    }
+
+    public function testLocaleChainStartsAtInactiveLocale(): void
+    {
+        // fr is seeded inactive with English as its fallback. A disabled locale
+        // must still expose its chain, otherwise translation cannot fall through it.
+        $rows = $this->database->fetchAll(
+            'SELECT l.code
+                FROM v_i18n_locale_chains AS c
+                JOIN locales AS l ON l.id = c.locale_id
+                WHERE c.root_locale_id = :root
+                ORDER BY c.depth',
+            ['root' => $this->localeId('fr')],
+        );
+
+        self::assertSame([['code' => 'fr'], ['code' => 'en']], $rows);
+    }
+
+    public function testLocaleResolveReturnsNullForUnknownLocale(): void
+    {
+        $row = $this->database->fetchOne('SELECT fn_i18n_locale_resolve(999) AS resolved');
+
+        self::assertNotNull($row);
+        self::assertNull($row['resolved']);
     }
 }
