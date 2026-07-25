@@ -1,9 +1,12 @@
 -- -------------------------------------------------------------------------------------------------
 -- Locale ID from Code
 --
--- Returns the ID of an active locale for the given locale code.
--- The input is normalized by trimming whitespace and converting it to lowercase.
--- Returns NULL if no matching active locale exists.
+-- Returns the ID of an active locale for the given locale code, or NULL when no
+-- active locale matches. The input is normalized by trimming whitespace and
+-- converting it to lowercase.
+--
+-- This is the restrictive form of fn_i18n_locale_lookup, kept as a single-argument
+-- function because MariaDB has no default parameter values.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION fn_i18n_locale_id_from_code(
@@ -11,15 +14,7 @@ CREATE OR REPLACE FUNCTION fn_i18n_locale_id_from_code(
 )
 RETURNS SMALLINT UNSIGNED
 READS SQL DATA
+COMMENT 'Returns the ID of an active locale by normalized code'
 BEGIN
-    DECLARE v_id SMALLINT UNSIGNED;
-
-    SELECT id
-      INTO v_id
-      FROM locales
-     WHERE code = LOWER(TRIM(p_code))
-       AND is_active = TRUE
-     LIMIT 1;
-
-    RETURN v_id;
+    RETURN fn_i18n_locale_lookup(p_code, TRUE);
 END;
