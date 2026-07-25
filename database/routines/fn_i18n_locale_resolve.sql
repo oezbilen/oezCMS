@@ -1,46 +1,29 @@
 -- -------------------------------------------------------------------------------------------------
 -- Resolve Locale Fallback
 --
--- Resolves the final locale by following the fallback chain.
--- Traversal stops when no further fallback exists, a self-reference is detected,
--- or the configured maximum depth is reached to guard against invalid fallback loops.
+-- Returns the last locale of the fallback chain starting at the given locale, or NULL
+-- when no such locale exists.
+--
+-- The chain comes from v_i18n_locale_chains, so the traversal, the depth cap, and the
+-- cycle handling are shared with translation instead of reimplemented. A chain
+-- truncated by the cap resolves to the deepest locale still within it.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION fn_i18n_locale_resolve(
-    p_locale_id SMALLINT UNSIGNED,
-    p_max_depth INT
+    p_locale_id SMALLINT UNSIGNED
 )
 RETURNS SMALLINT UNSIGNED
 READS SQL DATA
+COMMENT 'Returns the final locale of a fallback chain'
 BEGIN
-    DECLARE v_current SMALLINT UNSIGNED;
-    DECLARE v_next SMALLINT UNSIGNED;
-    DECLARE v_depth INT DEFAULT 0;
+    DECLARE v_id SMALLINT UNSIGNED DEFAULT NULL;
 
-    IF p_locale_id IS NULL THEN
-        RETURN NULL;
-    END IF;
+    SELECT c.locale_id
+      INTO v_id
+      FROM v_i18n_locale_chains AS c
+     WHERE c.root_locale_id = p_locale_id
+     ORDER BY c.depth DESC
+     LIMIT 1;
 
-    SET v_current = p_locale_id;
-
-    WHILE v_depth < p_max_depth DO
-        SELECT fallback_locale_id
-          INTO v_next
-          FROM locales
-         WHERE id = v_current
-         LIMIT 1;
-
-        IF v_next IS NULL THEN
-            RETURN v_current;
-        END IF;
-
-        IF v_next = v_current THEN
-            RETURN v_current;
-        END IF;
-
-        SET v_current = v_next;
-        SET v_depth = v_depth + 1;
-    END WHILE;
-
-    RETURN v_current;
+    RETURN v_id;
 END;
