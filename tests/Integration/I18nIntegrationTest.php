@@ -430,4 +430,37 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
 
         self::assertSame('core.welcome', $this->translate('core', 'welcome', 'xa'));
     }
+
+    public function testRejectsInactiveDefaultLocaleOnInsert(): void
+    {
+        $this->database->execute('UPDATE locales SET is_default = FALSE WHERE is_default = TRUE');
+
+        $cleared = $this->database->fetchOne('SELECT id FROM locales WHERE is_default = TRUE');
+
+        self::assertNull($cleared);
+
+        $this->expectException(DatabaseException::class);
+
+        $this->database->execute(
+            'INSERT INTO locales (code, english_name, native_name, sort_order, is_active, is_default)
+                VALUES (:code, :english_name, :native_name, 99, FALSE, TRUE)',
+            ['code' => 'xd', 'english_name' => 'xd', 'native_name' => 'xd'],
+        );
+    }
+
+    public function testAllowsActiveDefaultLocaleOnInsert(): void
+    {
+        $this->database->execute('UPDATE locales SET is_default = FALSE WHERE is_default = TRUE');
+
+        $this->database->execute(
+            'INSERT INTO locales (code, english_name, native_name, sort_order, is_active, is_default)
+                VALUES (:code, :english_name, :native_name, 99, TRUE, TRUE)',
+            ['code' => 'xd', 'english_name' => 'xd', 'native_name' => 'xd'],
+        );
+
+        $row = $this->database->fetchOne('SELECT code FROM locales WHERE is_default = TRUE');
+
+        self::assertNotNull($row);
+        self::assertSame('xd', $row['code']);
+    }
 }
