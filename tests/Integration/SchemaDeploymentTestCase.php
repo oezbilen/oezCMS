@@ -9,7 +9,7 @@ use OezCMS\Console\DbDeployCommand;
 use OezCMS\Console\ExitCode;
 use OezCMS\Console\Input;
 use OezCMS\Core\Container;
-use OezCMS\Core\Database;
+use OezCMS\Core\MigrationDatabase;
 
 abstract class SchemaDeploymentTestCase extends DatabaseIntegrationTestCase
 {
@@ -75,7 +75,7 @@ abstract class SchemaDeploymentTestCase extends DatabaseIntegrationTestCase
     private function deploySchema(): void
     {
         $container = new Container();
-        $container->instance(Database::class, $this->database);
+        $container->instance(MigrationDatabase::class, new MigrationDatabase($this->database));
 
         $command = new DbDeployCommand($container, dirname(__DIR__, 2) . '/database');
         $exitCode = $command->run(Input::fromArgv(['console', 'db:deploy']), new BufferedOutput());

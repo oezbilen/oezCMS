@@ -10,9 +10,9 @@ use OezCMS\Console\DbDeployCommand;
 use OezCMS\Console\ExitCode;
 use OezCMS\Console\Input;
 use OezCMS\Core\Container;
-use OezCMS\Core\Database;
 use OezCMS\Core\DatabaseException;
 use OezCMS\Core\MariaDbConnectionFactory;
+use OezCMS\Core\MigrationDatabase;
 
 final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
 {
@@ -84,7 +84,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
     private function runCommand(BufferedOutput $output, int $lockTimeoutSeconds = 30): ExitCode
     {
         $container = new Container();
-        $container->instance(Database::class, $this->database);
+        $container->instance(MigrationDatabase::class, new MigrationDatabase($this->database));
 
         $command = new DbDeployCommand($container, $this->databasePath, $lockTimeoutSeconds);
 
