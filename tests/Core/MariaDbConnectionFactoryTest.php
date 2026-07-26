@@ -147,4 +147,96 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
         $factory->password(new Config([]));
     }
+
+    public function testMigrationCredentialsFallBackToTheRuntimeCredentials(): void
+    {
+        $config = new Config([
+            'database' => ['username' => 'oezcms_runtime', 'password' => 'runtime-secret'],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        self::assertSame('oezcms_runtime', $factory->migrationUsername($config));
+        self::assertSame('runtime-secret', $factory->migrationPassword($config));
+    }
+
+    public function testUsesConfiguredMigrationCredentials(): void
+    {
+        $config = new Config([
+            'database' => [
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => ['username' => 'oezcms_deploy', 'password' => 'deploy-secret'],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        self::assertSame('oezcms_deploy', $factory->migrationUsername($config));
+        self::assertSame('deploy-secret', $factory->migrationPassword($config));
+    }
+
+    public function testAllowsExplicitlyEmptyMigrationPassword(): void
+    {
+        $config = new Config([
+            'database' => [
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => ['username' => 'oezcms_deploy', 'password' => ''],
+            ],
+        ]);
+
+        self::assertSame('', (new MariaDbConnectionFactory())->migrationPassword($config));
+    }
+
+    public function testRejectsMigrationUsernameWithoutPassword(): void
+    {
+        $config = new Config([
+            'database' => [
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => ['username' => 'oezcms_deploy'],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->migrationUsername($config);
+    }
+
+    public function testRejectsMigrationPasswordWithoutUsername(): void
+    {
+        $config = new Config([
+            'database' => [
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => ['password' => 'deploy-secret'],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->migrationPassword($config);
+    }
+
+    public function testRejectsEmptyMigrationUsername(): void
+    {
+        $config = new Config([
+            'database' => [
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => ['username' => '', 'password' => 'deploy-secret'],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->migrationUsername($config);
+    }
 }

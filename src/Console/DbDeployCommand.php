@@ -7,6 +7,7 @@ namespace OezCMS\Console;
 use OezCMS\Core\Container;
 use OezCMS\Core\Database;
 use OezCMS\Core\DatabaseException;
+use OezCMS\Core\MigrationDatabase;
 
 final class DbDeployCommand implements Command
 {
@@ -79,7 +80,7 @@ final class DbDeployCommand implements Command
             return ExitCode::Success;
         }
 
-        $database = $this->container->get(Database::class);
+        $database = $this->container->get(MigrationDatabase::class)->database();
         $this->acquireLock($database);
 
         try {

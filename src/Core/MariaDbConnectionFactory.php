@@ -68,6 +68,62 @@ final class MariaDbConnectionFactory
     }
 
     /**
+     * Deployment may run as a different account than the runtime, so the runtime
+     * does not need the DDL privileges it never uses. Everything else about the
+     * connection stays shared: it is the same database, only a different login.
+     *
+     * Absent migration credentials fall back to the runtime ones, which keeps the
+     * separation opt-in.
+     */
+    public function migrationUsername(Config $config): string
+    {
+        if (!$this->hasMigrationCredentials($config)) {
+            return $this->username($config);
+        }
+
+        $username = $config->getString('database.migration.username');
+
+        if ('' === $username) {
+            throw new DatabaseException('Missing required configuration: database.migration.username');
+        }
+
+        return $username;
+    }
+
+    /**
+     * As with the runtime password, an empty value is legitimate under socket
+     * authentication; only an absent one is a misconfiguration.
+     */
+    public function migrationPassword(Config $config): string
+    {
+        if (!$this->hasMigrationCredentials($config)) {
+            return $this->password($config);
+        }
+
+        return $config->getString('database.migration.password');
+    }
+
+    /**
+     * The two migration values are configured together or not at all. Half a pair
+     * would silently combine one of them with a runtime value and fail to
+     * authenticate for a reason the configuration does not show.
+     */
+    private function hasMigrationCredentials(Config $config): bool
+    {
+        $hasUsername = $config->has('database.migration.username');
+        $hasPassword = $config->has('database.migration.password');
+
+        if ($hasUsername !== $hasPassword) {
+            throw new DatabaseException(
+                'Migration credentials must be configured together: '
+                . 'database.migration.username and database.migration.password.',
+            );
+        }
+
+        return $hasUsername;
+    }
+
+    /**
      * @return array<int, bool|int|string>
      */
     public function options(): array
@@ -89,6 +145,16 @@ final class MariaDbConnectionFactory
             $this->dsn($config),
             $this->username($config),
             $this->password($config),
+            $this->options(),
+        );
+    }
+
+    public function createForMigrations(Config $config): PDO
+    {
+        return new PDO(
+            $this->dsn($config),
+            $this->migrationUsername($config),
+            $this->migrationPassword($config),
             $this->options(),
         );
     }
