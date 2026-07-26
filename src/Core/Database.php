@@ -159,6 +159,20 @@ final class Database
             }
         }
 
+        // A procedure issuing START TRANSACTION implicitly commits the one it was
+        // called in. PDO reports the server's transaction status, so the mismatch
+        // is visible here, where the caller can still be told which procedure did
+        // it, instead of later at a commit that then fails for no apparent reason.
+        if ($this->transactionLevel > 0 && !$this->connection->inTransaction()) {
+            throw new DatabaseException(
+                message: sprintf(
+                    'Procedure %s committed the transaction it was called in; a procedure '
+                    . 'must not manage transactions when called inside Database::transaction().',
+                    $procedure,
+                ),
+            );
+        }
+
         return $resultSets;
     }
 
@@ -250,6 +264,13 @@ final class Database
 
     private function rollBackOrToSavepoint(int $level): void
     {
+        if (0 === $level && !$this->connection->inTransaction()) {
+            // Nothing to roll back: the transaction already ended on the server,
+            // which callProcedure reports on its own. Attempting it anyway would
+            // fail and mark a connection unusable that is in fact intact.
+            return;
+        }
+
         try {
             if (0 === $level) {
                 $this->connection->rollBack();
