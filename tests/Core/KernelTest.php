@@ -8,6 +8,7 @@ use OezCMS\Core\Config;
 use OezCMS\Core\Database;
 use OezCMS\Core\Environment;
 use OezCMS\Core\Kernel;
+use OezCMS\Core\MigrationDatabase;
 use PHPUnit\Framework\TestCase;
 
 final class KernelTest extends TestCase
@@ -24,6 +25,8 @@ final class KernelTest extends TestCase
         'DB_USERNAME',
         'DB_PASSWORD',
         'DB_CHARSET',
+        'DB_MIGRATION_USERNAME',
+        'DB_MIGRATION_PASSWORD',
     ];
 
     protected function setUp(): void
@@ -66,6 +69,13 @@ final class KernelTest extends TestCase
         foreach (self::ENVIRONMENT_KEYS as $key) {
             unset($_ENV[$key], $_SERVER[$key]);
             putenv($key);
+        }
+    }
+
+    private function appendToEnvFile(string $contents): void
+    {
+        if (false === file_put_contents($this->envFile, $contents, FILE_APPEND)) {
+            self::fail('Unable to extend the temporary env file.');
         }
     }
 
@@ -125,5 +135,33 @@ final class KernelTest extends TestCase
         $container = (new Kernel($this->basePath . '/missing.env'))->boot();
 
         self::assertSame('staging', $container->get(Config::class)->getString('app.env'));
+    }
+
+    public function testConfigMapsMigrationCredentials(): void
+    {
+        $this->appendToEnvFile("DB_MIGRATION_USERNAME=oezcms_deploy\nDB_MIGRATION_PASSWORD=deploy-secret\n");
+
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        self::assertSame('oezcms_deploy', $config->getString('database.migration.username'));
+        self::assertSame('deploy-secret', $config->getString('database.migration.password'));
+    }
+
+    public function testConfigOmitsAbsentMigrationCredentials(): void
+    {
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        // The factory reads a present key as a configured credential, so an absent
+        // one must stay absent rather than be written as an empty string — that
+        // would make half a pair look configured and trip the pair rule.
+        self::assertFalse($config->has('database.migration.username'));
+        self::assertFalse($config->has('database.migration.password'));
+    }
+
+    public function testBootRegistersLazyMigrationDatabaseFactory(): void
+    {
+        $container = (new Kernel($this->envFile))->boot();
+
+        self::assertTrue($container->has(MigrationDatabase::class));
     }
 }
