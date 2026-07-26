@@ -96,4 +96,55 @@ final class MariaDbConnectionFactoryTest extends TestCase
         self::assertFalse($options[PDO::ATTR_EMULATE_PREPARES]);
         self::assertFalse($options[PDO::ATTR_STRINGIFY_FETCHES]);
     }
+
+    public function testReturnsConfiguredUsername(): void
+    {
+        $config = new Config(['database' => ['username' => 'oezcms_runtime']]);
+
+        self::assertSame('oezcms_runtime', (new MariaDbConnectionFactory())->username($config));
+    }
+
+    public function testThrowsWhenUsernameIsMissing(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->username(new Config([]));
+    }
+
+    public function testThrowsWhenUsernameIsEmpty(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->username(new Config(['database' => ['username' => '']]));
+    }
+
+    public function testReturnsConfiguredPassword(): void
+    {
+        $config = new Config(['database' => ['password' => 'secret']]);
+
+        self::assertSame('secret', (new MariaDbConnectionFactory())->password($config));
+    }
+
+    public function testAllowsExplicitlyEmptyPassword(): void
+    {
+        // An empty password is legitimate under socket authentication; an
+        // absent one is not. Only the missing key may be rejected, otherwise
+        // the safest setup would be the one configuration that is forbidden.
+        $config = new Config(['database' => ['password' => '']]);
+
+        self::assertSame('', (new MariaDbConnectionFactory())->password($config));
+    }
+
+    public function testThrowsWhenPasswordIsMissing(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->password(new Config([]));
+    }
 }
