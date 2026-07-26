@@ -14,6 +14,7 @@ final class Database
     private const string IDENTIFIER_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/';
     private const string SAVEPOINT_PREFIX = 'oezcms_sp_';
     private int $transactionLevel = 0;
+    private ?string $unusableReason = null;
 
     public function __construct(private readonly PDO $connection)
     {
@@ -22,6 +23,23 @@ final class Database
     private function savepointName(int $level): string
     {
         return self::SAVEPOINT_PREFIX . $level;
+    }
+
+    /**
+     * A failed rollback leaves the connection in an unknown state: it may still
+     * be inside a transaction, and its savepoint stack no longer matches what
+     * this object believes about it. Continuing to use it would produce results
+     * nobody can reason about.
+     *
+     * The cleanup failure is therefore reported here, at the next access, rather
+     * than where it happened — there it would have replaced the exception that
+     * caused the rollback in the first place.
+     */
+    private function assertUsable(): void
+    {
+        if (null !== $this->unusableReason) {
+            throw new DatabaseException(message: $this->unusableReason);
+        }
     }
 
     /**
@@ -65,6 +83,8 @@ final class Database
      */
     public function executeRaw(string $sql): int
     {
+        $this->assertUsable();
+
         try {
             $affectedRows = $this->connection->exec($sql);
 
@@ -139,11 +159,27 @@ final class Database
             }
         }
 
+        // A procedure issuing START TRANSACTION implicitly commits the one it was
+        // called in. PDO reports the server's transaction status, so the mismatch
+        // is visible here, where the caller can still be told which procedure did
+        // it, instead of later at a commit that then fails for no apparent reason.
+        if ($this->transactionLevel > 0 && !$this->connection->inTransaction()) {
+            throw new DatabaseException(
+                message: sprintf(
+                    'Procedure %s committed the transaction it was called in; a procedure '
+                    . 'must not manage transactions when called inside Database::transaction().',
+                    $procedure,
+                ),
+            );
+        }
+
         return $resultSets;
     }
 
     public function lastInsertId(): string
     {
+        $this->assertUsable();
+
         $id = $this->connection->lastInsertId();
 
         if (false === $id) {
@@ -162,6 +198,8 @@ final class Database
      */
     public function transaction(callable $callback): mixed
     {
+        $this->assertUsable();
+
         $level = $this->transactionLevel;
 
         $this->beginOrSavepoint($level);
@@ -185,6 +223,13 @@ final class Database
 
     private function beginOrSavepoint(int $level): void
     {
+        if (0 === $level && $this->connection->inTransaction()) {
+            throw new DatabaseException(
+                message: 'A transaction is already active on this connection; '
+                    . 'all transactions must go through Database::transaction().',
+            );
+        }
+
         try {
             if (0 === $level) {
                 $this->connection->beginTransaction();
@@ -219,15 +264,27 @@ final class Database
 
     private function rollBackOrToSavepoint(int $level): void
     {
+        if (0 === $level && !$this->connection->inTransaction()) {
+            // Nothing to roll back: the transaction already ended on the server,
+            // which callProcedure reports on its own. Attempting it anyway would
+            // fail and mark a connection unusable that is in fact intact.
+            return;
+        }
+
         try {
             if (0 === $level) {
                 $this->connection->rollBack();
             } else {
                 $this->connection->exec(sprintf('ROLLBACK TO SAVEPOINT %s', $this->savepointName($level)));
             }
-        } catch (PDOException) {
-            // Keep the original failure as the propagating exception;
-            // a failed rollback must not mask why the transaction broke.
+        } catch (PDOException $exception) {
+            // Keep the original failure as the propagating exception; a failed
+            // rollback must not mask why the transaction broke. It must not
+            // vanish either, so the connection is marked unusable instead.
+            $this->unusableReason = sprintf(
+                'Connection is unusable after a failed rollback: %s',
+                $exception->getMessage(),
+            );
         }
     }
 
@@ -236,6 +293,8 @@ final class Database
      */
     private function run(string $sql, array $parameters): PDOStatement
     {
+        $this->assertUsable();
+
         try {
             $statement = $this->connection->prepare($sql);
 
