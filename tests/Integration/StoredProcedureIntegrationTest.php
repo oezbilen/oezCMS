@@ -46,6 +46,13 @@ final class StoredProcedureIntegrationTest extends DatabaseIntegrationTestCase
                 SELECT 2 AS second_value WHERE FALSE;
             END
             SQL);
+
+        $this->pdo->exec(<<<'SQL'
+            CREATE OR REPLACE PROCEDURE test_no_result()
+            BEGIN
+                SET @test_no_result_ran = 1;
+            END
+            SQL);
     }
 
     protected function tearDown(): void
@@ -56,6 +63,7 @@ final class StoredProcedureIntegrationTest extends DatabaseIntegrationTestCase
             $this->pdo->exec('DROP PROCEDURE IF EXISTS test_echo');
             $this->pdo->exec('DROP PROCEDURE IF EXISTS test_empty_result_set');
             $this->pdo->exec('DROP PROCEDURE IF EXISTS test_trailing_empty_result');
+            $this->pdo->exec('DROP PROCEDURE IF EXISTS test_no_result');
         }
 
         parent::tearDown();
@@ -106,5 +114,13 @@ final class StoredProcedureIntegrationTest extends DatabaseIntegrationTestCase
         self::assertCount(2, $resultSets);
         self::assertSame([['first_value' => 1]], $resultSets[0]);
         self::assertSame([], $resultSets[1]);
+    }
+
+    public function testReturnsNoResultSetsForProcedureWithoutSelect(): void
+    {
+        // The boundary case of removing the completion packet by position: here
+        // it is the only row set the driver produces. A call that did not run
+        // would raise rather than return an empty list.
+        self::assertSame([], $this->database->callProcedure('test_no_result'));
     }
 }

@@ -107,6 +107,23 @@ final class Database
     }
 
     /**
+     * Calls a stored procedure and returns one entry per result set it produced.
+     *
+     * PDO_MYSQL appends a final empty row set reporting procedure completion,
+     * which is removed by position rather than detected: columnCount() does not
+     * identify it reliably. On PHP 8.4 with mysqlnd against MariaDB 11 it reports
+     * a stale non-zero count while fetchAll() returns nothing.
+     *
+     * The shape of the return value is therefore an assumption about the driver,
+     * not a guarantee of the protocol. The integration tests pin it for the
+     * versions this project supports — including a legitimately empty trailing
+     * result set, which a wrong assumption would swallow — and CI runs them
+     * against MariaDB 11. A driver that behaves differently produces a failing
+     * build rather than a quietly missing result set.
+     *
+     * Update counts are not exposed. No caller needs one, and the first that does
+     * should shape that return type rather than have it guessed at now.
+     *
      * @param  array<string, mixed>                   $parameters
      * @return list<array<int, array<string, mixed>>>
      */
@@ -137,11 +154,9 @@ final class Database
                 $resultSets[] = $rows;
             } while ($statement->nextRowset());
 
-            // PDO_MYSQL exposes the procedure completion packet as the final
-            // empty row set. It is removed by position because columnCount()
-            // does not identify it reliably across driver versions.
-            // The CALL always yields at least the final status row set, so the list
-            // is guaranteed to be non-empty here.
+            // Remove the completion packet. The CALL always yields at least that
+            // row set, so the list is non-empty here; the docblock explains why
+            // the packet is removed by position instead of being detected.
             array_pop($resultSets);
         } catch (PDOException $exception) {
             throw new DatabaseException(
