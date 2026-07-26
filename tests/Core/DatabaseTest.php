@@ -177,23 +177,37 @@ final class DatabaseTest extends TestCase
 
     public function testWrapsTransactionControlErrorsInDatabaseException(): void
     {
-        $this->pdo->beginTransaction();
+        $database = new Database($this->pdoRefusingBeginTransaction());
 
         $this->expectException(DatabaseException::class);
 
-        $this->database->transaction(static fn (): bool => true);
+        $database->transaction(static fn (): bool => true);
     }
 
     public function testKeepsOriginalPdoExceptionAsPreviousForControlErrors(): void
     {
-        $this->pdo->beginTransaction();
+        $database = new Database($this->pdoRefusingBeginTransaction());
 
         try {
-            $this->database->transaction(static fn (): bool => true);
+            $database->transaction(static fn (): bool => true);
             self::fail('Expected DatabaseException was not thrown.');
         } catch (DatabaseException $exception) {
             self::assertInstanceOf(PDOException::class, $exception->getPrevious());
         }
+    }
+
+    private function pdoRefusingBeginTransaction(): PDO
+    {
+        $pdo = new class ('sqlite::memory:') extends PDO {
+            public function beginTransaction(): bool
+            {
+                throw new PDOException('begin refused');
+            }
+        };
+
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        return $pdo;
     }
 
     public function testAttachesSqlAndParametersToQueryErrors(): void
