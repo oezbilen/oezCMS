@@ -14,6 +14,11 @@ final class Kernel
         'DB_CHARSET' => 'charset',
     ];
 
+    private const array DATABASE_MIGRATION_KEYS = [
+        'DB_MIGRATION_USERNAME' => 'username',
+        'DB_MIGRATION_PASSWORD' => 'password',
+    ];
+
     public function __construct(private readonly string $envFile)
     {
     }
@@ -36,6 +41,12 @@ final class Kernel
             return new Database($factory->create($container->get(Config::class)));
         });
 
+        $container->set(MigrationDatabase::class, static function (Container $container): MigrationDatabase {
+            $factory = new MariaDbConnectionFactory();
+
+            return new MigrationDatabase(new Database($factory->createForMigrations($container->get(Config::class))));
+        });
+
         return $container;
     }
 
@@ -51,6 +62,20 @@ final class Kernel
 
         if (null !== $environment->get('DB_PORT')) {
             $database['port'] = $environment->getInt('DB_PORT');
+        }
+
+        $migration = [];
+
+        foreach (self::DATABASE_MIGRATION_KEYS as $environmentKey => $configKey) {
+            if (null !== $environment->get($environmentKey)) {
+                $migration[$configKey] = $environment->getString($environmentKey);
+            }
+        }
+
+        // Written only when something is configured. An empty sub-array would make
+        // the factory see a configured credential where there is none.
+        if ([] !== $migration) {
+            $database['migration'] = $migration;
         }
 
         return new Config([
