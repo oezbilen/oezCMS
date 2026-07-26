@@ -9,6 +9,7 @@ use OezCMS\Core\DatabaseException;
 use PDO;
 use PDOException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class DatabaseTest extends TestCase
 {
@@ -266,5 +267,68 @@ final class DatabaseTest extends TestCase
             self::assertSame([], $exception->getParameters());
             self::assertInstanceOf(PDOException::class, $exception->getPrevious());
         }
+    }
+
+    public function testFailedRollbackKeepsTheOriginalException(): void
+    {
+        $database = new Database($this->pdoRefusingRollback());
+
+        try {
+            $database->transaction(static function (): void {
+                throw new RuntimeException('callback failed');
+            });
+        } catch (RuntimeException $exception) {
+            // The cleanup failure must never replace the failure that caused it:
+            // the caller needs to see why the transaction was abandoned.
+            self::assertSame('callback failed', $exception->getMessage());
+        }
+    }
+
+    public function testFailedRollbackMakesTheConnectionUnusable(): void
+    {
+        $database = new Database($this->pdoRefusingRollback());
+
+        try {
+            $database->transaction(static function (): void {
+                throw new RuntimeException('callback failed');
+            });
+        } catch (RuntimeException) {
+            // Expected; the rollback failure is what this test is about.
+        }
+
+        // A connection whose rollback failed may still be in a transaction and
+        // its savepoint state is unknown, so continuing to use it is the actual
+        // danger. The swallowed error surfaces at the next access instead.
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/rollback refused/');
+
+        $database->fetchAll('SELECT 1');
+    }
+
+    public function testRejectsTransactionWhenConnectionAlreadyHasOne(): void
+    {
+        $this->pdo->beginTransaction();
+
+        // PDO already refuses this, but with a message that does not say which
+        // rule was broken. Matching on the rule keeps this test honest: the
+        // driver's own wording cannot satisfy it.
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/must go through Database::transaction/');
+
+        $this->database->transaction(static fn (): int => 1);
+    }
+
+    private function pdoRefusingRollback(): PDO
+    {
+        $pdo = new class ('sqlite::memory:') extends PDO {
+            public function rollBack(): bool
+            {
+                throw new PDOException('rollback refused');
+            }
+        };
+
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        return $pdo;
     }
 }
