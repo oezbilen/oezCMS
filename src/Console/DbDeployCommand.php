@@ -75,7 +75,7 @@ final class DbDeployCommand implements Command
         }
 
         if ([] === $migrationFiles && [] === array_filter($objectFiles)) {
-            $output->writeLine('Deployed 0 object(s).');
+            $output->writeLine('Nothing to deploy.');
 
             return ExitCode::Success;
         }
@@ -84,17 +84,23 @@ final class DbDeployCommand implements Command
         $this->acquireLock($database);
 
         try {
-            $deployed = $this->applyMigrations($database, $migrationFiles, $output);
+            $applied = $this->applyMigrations($database, $migrationFiles, $output);
 
             foreach ($objectFiles as $directory => $files) {
                 foreach ($files as $file) {
                     $database->executeRaw($this->readSqlFile($file));
                     $output->writeLine(sprintf('Applied %s/%s', $directory, basename($file)));
-                    ++$deployed;
                 }
             }
 
-            $output->writeLine(sprintf('Deployed %d object(s).', $deployed));
+            // Counted from the file lists rather than tallied while deploying:
+            // every file has run by the time this is reached, since a failure
+            // leaves through the exception instead.
+            $output->writeLine(sprintf('Migrations applied: %d', $applied));
+
+            foreach ($objectFiles as $directory => $files) {
+                $output->writeLine(sprintf('%s refreshed: %d', ucfirst($directory), count($files)));
+            }
 
             return ExitCode::Success;
         } finally {
@@ -113,7 +119,36 @@ final class DbDeployCommand implements Command
         // Normalized before hashing AND executing, so the stored checksum
         // always describes exactly the statement that ran, regardless of
         // the platform the file was checked out on.
-        return str_replace("\r\n", "\n", $sql);
+        $sql = str_replace("\r\n", "\n", $sql);
+
+        $this->assertCarriesStatement($sql, $file);
+
+        return $sql;
+    }
+
+    /**
+     * Every file in this project opens with a comment header, so "nothing but
+     * comments" is the shape an emptied-out file actually takes.
+     *
+     * Migrations are read while the pending list is collected, which is before
+     * any tracking row is written. The driver would reject an empty query too,
+     * but only after the migration had been recorded as started and then
+     * failed, leaving someone to resolve a failure that never reached the
+     * schema.
+     */
+    private function assertCarriesStatement(string $sql, string $file): void
+    {
+        // Remove ordinary block comments, but retain executable MySQL and
+        // MariaDB comments: /*! ... */ and /*M! ... */.
+        $statements = preg_replace('#/\*(?!!|M!).*?\*/#s', '', $sql);
+
+        if (null !== $statements) {
+            $statements = preg_replace('/^[\t ]*(?:--(?=[\s\x00]|$)|#).*$/m', '', $statements);
+        }
+
+        if (null === $statements || '' === trim($statements)) {
+            throw new ConsoleException(sprintf('%s contains no SQL statement.', $file));
+        }
     }
 
     /**
@@ -264,12 +299,23 @@ final class DbDeployCommand implements Command
     }
 
     /**
+     * Migrations run in filename order, so the order is part of the contract
+     * rather than a convenience. glob() already sorts; sorting explicitly says
+     * that the deploy depends on it, instead of leaving a reader to work out
+     * whether it merely happens to hold.
+     *
      * @return list<string>
      */
     private function sqlFiles(string $directory): array
     {
         $files = glob($this->databasePath . '/' . $directory . '/*.sql');
 
-        return false === $files ? [] : $files;
+        if (false === $files) {
+            return [];
+        }
+
+        sort($files, SORT_STRING);
+
+        return $files;
     }
 }

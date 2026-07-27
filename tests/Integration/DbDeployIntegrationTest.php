@@ -179,7 +179,13 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
 
         $output = new BufferedOutput();
         self::assertSame(ExitCode::Success, $this->runCommand($output));
-        self::assertSame("Deployed 0 object(s).\n", $output->contents());
+        self::assertSame(
+            "Migrations applied: 0\n"
+            . "Routines refreshed: 0\n"
+            . "Views refreshed: 0\n"
+            . "Triggers refreshed: 0\n",
+            $output->contents(),
+        );
     }
 
     public function testDeployRecordsCompletedStatusWithChecksum(): void
@@ -351,7 +357,10 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
             . "Applied routines/test_deployed_procedure.sql\n"
             . "Applied views/test_migration_view.sql\n"
             . "Applied triggers/test_migration_trigger.sql\n"
-            . "Deployed 4 object(s).\n",
+            . "Migrations applied: 1\n"
+            . "Routines refreshed: 1\n"
+            . "Views refreshed: 1\n"
+            . "Triggers refreshed: 1\n",
             $output->contents(),
         );
     }
@@ -390,5 +399,66 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         $this->expectException(DatabaseException::class);
 
         $this->runCommand(new BufferedOutput());
+    }
+
+    public function testRejectsEmptyMigrationFileWithoutRecordingIt(): void
+    {
+        $this->writeMigrationFile('900_empty.sql', "\n");
+
+        try {
+            $this->runCommand(new BufferedOutput());
+
+            self::fail('Expected ConsoleException was not thrown.');
+        } catch (ConsoleException) {
+            // Expected: the file carries no statement.
+        }
+
+        // The driver rejects an empty query as well, but only after the
+        // migration has been recorded as started and then failed. A file with
+        // nothing to run must not reach the tracking table at all — otherwise
+        // an operator is left resolving a failure that never touched the schema.
+        $row = $this->database->fetchOne(
+            'SELECT status FROM oezcms_migration WHERE migration = :migration',
+            ['migration' => '900_empty.sql'],
+        );
+
+        self::assertNull($row);
+    }
+
+    public function testRejectsCommentOnlyObjectFile(): void
+    {
+        // Every object file in this project opens with a comment header, so a
+        // body that was emptied out leaves a file that still looks complete.
+        $this->writeObjectFile('routines', 'fn_test_empty.sql', "-- only a header, no statement\n");
+
+        $this->expectException(ConsoleException::class);
+
+        $this->runCommand(new BufferedOutput());
+    }
+
+    public function testSummaryDistinguishesMigrationsFromRefreshedObjects(): void
+    {
+        $this->writeMigrationFile(
+            '001_create_table.sql',
+            'CREATE TABLE test_migration_table (id INT NOT NULL PRIMARY KEY)',
+        );
+        $this->writeProcedureFile();
+
+        self::assertSame(ExitCode::Success, $this->runCommand(new BufferedOutput()));
+
+        // Second run: the migration is already applied, the routine is deployed
+        // again because object files are idempotent by design. The single
+        // counter reported "Deployed 1 object(s)." here as well as on the first
+        // run, so it never told an operator whether the schema had changed.
+        $output = new BufferedOutput();
+        self::assertSame(ExitCode::Success, $this->runCommand($output));
+        self::assertSame(
+            "Applied routines/test_deployed_procedure.sql\n"
+            . "Migrations applied: 0\n"
+            . "Routines refreshed: 1\n"
+            . "Views refreshed: 0\n"
+            . "Triggers refreshed: 0\n",
+            $output->contents(),
+        );
     }
 }

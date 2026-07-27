@@ -71,7 +71,7 @@ final class DbDeployCommandTest extends TestCase
         $exitCode = $this->runCommand(new Container(), $this->databasePath . '/missing', $output);
 
         self::assertSame(ExitCode::Success, $exitCode);
-        self::assertSame("Deployed 0 object(s).\n", $output->contents());
+        self::assertSame("Nothing to deploy.\n", $output->contents());
     }
 
     public function testDoesNotResolveDatabaseWhenNothingToDeploy(): void
