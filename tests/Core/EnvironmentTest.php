@@ -129,21 +129,6 @@ final class EnvironmentTest extends TestCase
         self::assertSame('oez Content', $environment->get('APP_TITLE'));
     }
 
-    public function testIgnoresLinesWithEmptyKey(): void
-    {
-        file_put_contents(
-            $this->envFile,
-            "=orphan\n   =whitespace\nAPP_NAME=oezCMS\n",
-        );
-
-        $environment = new Environment($this->envFile);
-        $environment->load();
-
-        self::assertSame('oezCMS', $environment->get('APP_NAME'));
-        self::assertNull($environment->get(''));
-        self::assertArrayNotHasKey('', $_ENV);
-    }
-
     public function testStripsInlineComments(): void
     {
         file_put_contents(
@@ -341,5 +326,74 @@ final class EnvironmentTest extends TestCase
         self::assertNull($environment->get('RUNTIME_ONLY'));
     }
 
+    public function testRejectsLineThatIsNotAnAssignment(): void
+    {
+        file_put_contents($this->envFile, "APP_NAME=oezCMS\nINVALID LINE\n");
 
+        $environment = new Environment($this->envFile);
+
+        $this->expectException(EnvironmentException::class);
+        $this->expectExceptionMessageMatches('/line 2/');
+
+        $environment->load();
+    }
+
+    public function testRejectsLineWithEmptyKey(): void
+    {
+        file_put_contents($this->envFile, "=secret\n");
+
+        $environment = new Environment($this->envFile);
+
+        $this->expectException(EnvironmentException::class);
+
+        $environment->load();
+    }
+
+    public function testRejectsKeyThatIsNotAnIdentifier(): void
+    {
+        // Shell syntax, not configuration. This used to be accepted as a variable
+        // named "export APP_NAME", so the real key was never set and the default
+        // silently applied.
+        file_put_contents($this->envFile, "export APP_NAME=oezCMS\n");
+
+        $environment = new Environment($this->envFile);
+
+        $this->expectException(EnvironmentException::class);
+
+        $environment->load();
+    }
+
+    public function testRejectsDuplicateKey(): void
+    {
+        file_put_contents($this->envFile, "DUPLICATE=first\nDUPLICATE=second\n");
+
+        $environment = new Environment($this->envFile);
+
+        $this->expectException(EnvironmentException::class);
+
+        $environment->load();
+    }
+
+    public function testRejectsUnterminatedQuotedValue(): void
+    {
+        file_put_contents($this->envFile, "SECRET=\"abc\n");
+
+        $environment = new Environment($this->envFile);
+
+        $this->expectException(EnvironmentException::class);
+
+        $environment->load();
+    }
+
+    public function testKeepsEscapedQuoteInDoubleQuotedValue(): void
+    {
+        // The scan for the closing quote stopped at the escaped one, so this
+        // password became "abc\" — a wrong credential delivered without a word.
+        file_put_contents($this->envFile, "PASSWORD=\"abc\\\"def\"\n");
+
+        $environment = new Environment($this->envFile);
+        $environment->load();
+
+        self::assertSame('abc"def', $environment->get('PASSWORD'));
+    }
 }
