@@ -277,4 +277,63 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
         $factory->dsn(new Config(['database' => ['name' => 'oezcms', 'host' => '']]));
     }
+
+    public function testBuildsSocketDsn(): void
+    {
+        $config = new Config([
+            'database' => ['name' => 'oezcms', 'socket' => '/run/mysqld/mysqld.sock'],
+        ]);
+
+        self::assertSame(
+            'mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=oezcms;charset=utf8mb4',
+            (new MariaDbConnectionFactory())->dsn($config),
+        );
+    }
+
+    public function testRejectsSocketCombinedWithHost(): void
+    {
+        // Host and socket are different transports. Preferring one silently
+        // would leave the other in the file looking effective.
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'socket' => '/run/mysqld/mysqld.sock',
+                'host' => 'db.example.com',
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn($config);
+    }
+
+    public function testRejectsSocketCombinedWithPort(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'socket' => '/run/mysqld/mysqld.sock',
+                'port' => 3307,
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn($config);
+    }
+
+    public function testRejectsEmptySocket(): void
+    {
+        $config = new Config(['database' => ['name' => 'oezcms', 'socket' => '']]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn($config);
+    }
 }
