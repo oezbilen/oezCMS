@@ -67,7 +67,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
     public function testOptionsDisableMultiStatementExecution(): void
     {
-        $options = (new MariaDbConnectionFactory())->options();
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
 
         self::assertArrayHasKey(PDO::MYSQL_ATTR_MULTI_STATEMENTS, $options);
         self::assertFalse($options[PDO::MYSQL_ATTR_MULTI_STATEMENTS]);
@@ -75,7 +75,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
     public function testOptionsAppendOnlyFullGroupByToSessionSqlMode(): void
     {
-        $options = (new MariaDbConnectionFactory())->options();
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
 
         self::assertArrayHasKey(PDO::MYSQL_ATTR_INIT_COMMAND, $options);
 
@@ -89,7 +89,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
     public function testOptionsKeepSecurePdoDefaults(): void
     {
-        $options = (new MariaDbConnectionFactory())->options();
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
 
         self::assertSame(PDO::ERRMODE_EXCEPTION, $options[PDO::ATTR_ERRMODE]);
         self::assertSame(PDO::FETCH_ASSOC, $options[PDO::ATTR_DEFAULT_FETCH_MODE]);
@@ -276,5 +276,161 @@ final class MariaDbConnectionFactoryTest extends TestCase
         $this->expectException(DatabaseException::class);
 
         $factory->dsn(new Config(['database' => ['name' => 'oezcms', 'host' => '']]));
+    }
+
+    public function testBuildsSocketDsn(): void
+    {
+        $config = new Config([
+            'database' => ['name' => 'oezcms', 'socket' => '/run/mysqld/mysqld.sock'],
+        ]);
+
+        self::assertSame(
+            'mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=oezcms;charset=utf8mb4',
+            (new MariaDbConnectionFactory())->dsn($config),
+        );
+    }
+
+    public function testRejectsSocketCombinedWithHost(): void
+    {
+        // Host and socket are different transports. Preferring one silently
+        // would leave the other in the file looking effective.
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'socket' => '/run/mysqld/mysqld.sock',
+                'host' => 'db.example.com',
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn($config);
+    }
+
+    public function testRejectsSocketCombinedWithPort(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'socket' => '/run/mysqld/mysqld.sock',
+                'port' => 3307,
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn($config);
+    }
+
+    public function testRejectsEmptySocket(): void
+    {
+        $config = new Config(['database' => ['name' => 'oezcms', 'socket' => '']]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn($config);
+    }
+
+    public function testAppliesTlsCertificateAuthority(): void
+    {
+        $config = new Config(['database' => ['ssl' => ['ca' => '/etc/ssl/mariadb-ca.pem']]]);
+
+        $options = (new MariaDbConnectionFactory())->options($config);
+
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_SSL_CA, $options);
+        self::assertSame('/etc/ssl/mariadb-ca.pem', $options[PDO::MYSQL_ATTR_SSL_CA]);
+    }
+
+    public function testVerifiesTheServerCertificateWhenACertificateAuthorityIsConfigured(): void
+    {
+        // Encryption without server verification protects against nobody who is
+        // in a position to attack the connection in the first place.
+        $config = new Config(['database' => ['ssl' => ['ca' => '/etc/ssl/mariadb-ca.pem']]]);
+
+        $options = (new MariaDbConnectionFactory())->options($config);
+
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT, $options);
+        self::assertTrue($options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT]);
+    }
+
+    public function testAppliesClientCertificateAndKey(): void
+    {
+        $config = new Config([
+            'database' => [
+                'ssl' => [
+                    'ca' => '/etc/ssl/mariadb-ca.pem',
+                    'cert' => '/etc/ssl/client-cert.pem',
+                    'key' => '/etc/ssl/client-key.pem',
+                ],
+            ],
+        ]);
+
+        $options = (new MariaDbConnectionFactory())->options($config);
+
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_SSL_CERT, $options);
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_SSL_KEY, $options);
+        self::assertSame('/etc/ssl/client-cert.pem', $options[PDO::MYSQL_ATTR_SSL_CERT]);
+        self::assertSame('/etc/ssl/client-key.pem', $options[PDO::MYSQL_ATTR_SSL_KEY]);
+    }
+
+    public function testRejectsClientCertificateWithoutKey(): void
+    {
+        $config = new Config([
+            'database' => ['ssl' => ['ca' => '/etc/ssl/mariadb-ca.pem', 'cert' => '/etc/ssl/client-cert.pem']],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->options($config);
+    }
+
+    public function testRejectsClientCertificateWithoutCertificateAuthority(): void
+    {
+        // Presenting a client certificate to a server nobody verified
+        // authenticates the wrong direction.
+        $config = new Config([
+            'database' => ['ssl' => ['cert' => '/etc/ssl/client-cert.pem', 'key' => '/etc/ssl/client-key.pem']],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->options($config);
+    }
+
+    public function testAppliesConnectTimeout(): void
+    {
+        $options = (new MariaDbConnectionFactory())->options(new Config(['database' => ['connect_timeout' => 5]]));
+
+        self::assertArrayHasKey(PDO::ATTR_TIMEOUT, $options);
+        self::assertSame(5, $options[PDO::ATTR_TIMEOUT]);
+    }
+
+    public function testRejectsConnectTimeoutOutsideTheValidRange(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->options(new Config(['database' => ['connect_timeout' => 0]]));
+    }
+
+    public function testOmitsConnectionOptionsThatAreNotConfigured(): void
+    {
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
+
+        self::assertArrayNotHasKey(PDO::MYSQL_ATTR_SSL_CA, $options);
+        self::assertArrayNotHasKey(PDO::MYSQL_ATTR_SSL_CERT, $options);
+        self::assertArrayNotHasKey(PDO::MYSQL_ATTR_SSL_KEY, $options);
+        self::assertArrayNotHasKey(PDO::ATTR_TIMEOUT, $options);
     }
 }

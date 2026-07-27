@@ -12,11 +12,29 @@ final class Kernel
         'DB_USERNAME' => 'username',
         'DB_PASSWORD' => 'password',
         'DB_CHARSET' => 'charset',
+        'DB_SOCKET' => 'socket',
     ];
 
-    private const array DATABASE_MIGRATION_KEYS = [
-        'DB_MIGRATION_USERNAME' => 'username',
-        'DB_MIGRATION_PASSWORD' => 'password',
+    private const array DATABASE_INT_KEYS = [
+        'DB_PORT' => 'port',
+        'DB_CONNECT_TIMEOUT' => 'connect_timeout',
+    ];
+
+    /**
+     * Nested sections, written only when they carry something. An empty section
+     * would announce configured credentials or a configured CA to the factory,
+     * which distinguishes all of these by key presence alone.
+     */
+    private const array DATABASE_SECTIONS = [
+        'migration' => [
+            'DB_MIGRATION_USERNAME' => 'username',
+            'DB_MIGRATION_PASSWORD' => 'password',
+        ],
+        'ssl' => [
+            'DB_SSL_CA' => 'ca',
+            'DB_SSL_CERT' => 'cert',
+            'DB_SSL_KEY' => 'key',
+        ],
     ];
 
     private const string PRODUCTION_ENVIRONMENT = 'production';
@@ -78,30 +96,20 @@ final class Kernel
             );
         }
 
-        $database = [];
+        $database = $this->stringSection($environment, self::DATABASE_STRING_KEYS);
 
-        foreach (self::DATABASE_STRING_KEYS as $environmentKey => $configKey) {
+        foreach (self::DATABASE_INT_KEYS as $environmentKey => $configKey) {
             if (null !== $environment->get($environmentKey)) {
-                $database[$configKey] = $environment->getString($environmentKey);
+                $database[$configKey] = $environment->getInt($environmentKey);
             }
         }
 
-        if (null !== $environment->get('DB_PORT')) {
-            $database['port'] = $environment->getInt('DB_PORT');
-        }
+        foreach (self::DATABASE_SECTIONS as $configKey => $keys) {
+            $section = $this->stringSection($environment, $keys);
 
-        $migration = [];
-
-        foreach (self::DATABASE_MIGRATION_KEYS as $environmentKey => $configKey) {
-            if (null !== $environment->get($environmentKey)) {
-                $migration[$configKey] = $environment->getString($environmentKey);
+            if ([] !== $section) {
+                $database[$configKey] = $section;
             }
-        }
-
-        // Written only when something is configured. An empty sub-array would make
-        // the factory see a configured credential where there is none.
-        if ([] !== $migration) {
-            $database['migration'] = $migration;
         }
 
         return new Config([
@@ -111,5 +119,22 @@ final class Kernel
             ],
             'database' => $database,
         ]);
+    }
+
+    /**
+     * @param  array<string, string> $keys
+     * @return array<string, string>
+     */
+    private function stringSection(Environment $environment, array $keys): array
+    {
+        $section = [];
+
+        foreach ($keys as $environmentKey => $configKey) {
+            if (null !== $environment->get($environmentKey)) {
+                $section[$configKey] = $environment->getString($environmentKey);
+            }
+        }
+
+        return $section;
     }
 }

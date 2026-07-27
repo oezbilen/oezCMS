@@ -28,6 +28,11 @@ final class KernelTest extends TestCase
         'DB_CHARSET',
         'DB_MIGRATION_USERNAME',
         'DB_MIGRATION_PASSWORD',
+        'DB_SOCKET',
+        'DB_SSL_CA',
+        'DB_SSL_CERT',
+        'DB_SSL_KEY',
+        'DB_CONNECT_TIMEOUT',
     ];
 
     protected function setUp(): void
@@ -184,5 +189,52 @@ final class KernelTest extends TestCase
         $this->expectException(EnvironmentException::class);
 
         (new Kernel($this->envFile))->boot();
+    }
+
+    public function testConfigMapsSocket(): void
+    {
+        // Written fresh rather than appended: the base file configures a host,
+        // and a socket next to it is exactly what the factory refuses.
+        file_put_contents($this->envFile, "APP_ENV=testing\nDB_NAME=oezcms\nDB_SOCKET=/run/mysqld/mysqld.sock\n");
+
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        self::assertSame('/run/mysqld/mysqld.sock', $config->getString('database.socket'));
+    }
+
+    public function testConfigMapsTlsPaths(): void
+    {
+        $this->appendToEnvFile(
+            "DB_SSL_CA=/etc/ssl/mariadb-ca.pem\n"
+            . "DB_SSL_CERT=/etc/ssl/client-cert.pem\n"
+            . "DB_SSL_KEY=/etc/ssl/client-key.pem\n",
+        );
+
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        self::assertSame('/etc/ssl/mariadb-ca.pem', $config->getString('database.ssl.ca'));
+        self::assertSame('/etc/ssl/client-cert.pem', $config->getString('database.ssl.cert'));
+        self::assertSame('/etc/ssl/client-key.pem', $config->getString('database.ssl.key'));
+    }
+
+    public function testConfigMapsConnectTimeout(): void
+    {
+        $this->appendToEnvFile("DB_CONNECT_TIMEOUT=5\n");
+
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        self::assertSame(5, $config->getInt('database.connect_timeout'));
+    }
+
+    public function testConfigOmitsAbsentConnectionOptions(): void
+    {
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        // The factory branches on these keys being present, so an absent one has
+        // to stay absent rather than arrive as an empty string or a zero — which
+        // would read as "socket configured" or "timeout of nought".
+        self::assertFalse($config->has('database.socket'));
+        self::assertFalse($config->has('database.ssl.ca'));
+        self::assertFalse($config->has('database.connect_timeout'));
     }
 }

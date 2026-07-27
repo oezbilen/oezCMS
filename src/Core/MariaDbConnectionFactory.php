@@ -13,6 +13,8 @@ final class MariaDbConnectionFactory
     private const string DEFAULT_CHARSET = 'utf8mb4';
     private const int MIN_PORT = 1;
     private const int MAX_PORT = 65535;
+    private const int MIN_CONNECT_TIMEOUT = 1;
+    private const int MAX_CONNECT_TIMEOUT = 60;
 
     private const string SQL_MODE_INIT_COMMAND = 'SET SESSION sql_mode = IF('
         . "FIND_IN_SET('ONLY_FULL_GROUP_BY', @@SESSION.sql_mode) > 0,"
@@ -28,13 +30,38 @@ final class MariaDbConnectionFactory
             throw new DatabaseException('Missing required configuration: database.name');
         }
 
-        return sprintf(
-            'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-            $this->host($config),
-            $this->port($config),
-            $name,
-            $this->charset($config),
-        );
+        $target = sprintf('dbname=%s;charset=%s', $name, $this->charset($config));
+
+        if (!$config->has('database.socket')) {
+            return sprintf('mysql:host=%s;port=%d;%s', $this->host($config), $this->port($config), $target);
+        }
+
+        return sprintf('mysql:unix_socket=%s;%s', $this->socket($config), $target);
+    }
+
+    /**
+     * A socket and a host describe different transports, so configuring both is
+     * rejected rather than resolved by precedence — the losing value would stay
+     * in the file looking like it takes effect.
+     */
+    private function socket(Config $config): string
+    {
+        foreach (['database.host', 'database.port'] as $key) {
+            if ($config->has($key)) {
+                throw new DatabaseException(sprintf(
+                    'Invalid configuration: database.socket cannot be combined with %s.',
+                    $key,
+                ));
+            }
+        }
+
+        $socket = $config->getString('database.socket');
+
+        if ('' === $socket) {
+            throw new DatabaseException('Invalid configuration: database.socket must not be empty.');
+        }
+
+        return $socket;
     }
 
     /**
@@ -180,8 +207,10 @@ final class MariaDbConnectionFactory
     /**
      * @return array<int, bool|int|string>
      */
-    public function options(): array
+    public function options(Config $config): array
     {
+        // The union operator, not array_merge: merging would renumber the
+        // integer PDO attribute constants into a meaningless list.
         return [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -190,7 +219,83 @@ final class MariaDbConnectionFactory
             // Stacked queries are never legitimate in this code base.
             PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
             PDO::MYSQL_ATTR_INIT_COMMAND => self::SQL_MODE_INIT_COMMAND,
+        ] + $this->tlsOptions($config) + $this->timeoutOptions($config);
+    }
+
+    /**
+     * @return array<int, bool|string>
+     */
+    private function tlsOptions(Config $config): array
+    {
+        $hasCertificate = $config->has('database.ssl.cert');
+        $hasKey = $config->has('database.ssl.key');
+
+        if ($hasCertificate !== $hasKey) {
+            throw new DatabaseException(
+                'Invalid configuration: database.ssl.cert and database.ssl.key must be configured together.',
+            );
+        }
+
+        if (!$config->has('database.ssl.ca')) {
+            if ($hasCertificate) {
+                throw new DatabaseException(
+                    'Invalid configuration: a client certificate requires database.ssl.ca, '
+                    . 'otherwise the server it is presented to is never verified.',
+                );
+            }
+
+            return [];
+        }
+
+        $options = [
+            PDO::MYSQL_ATTR_SSL_CA => $this->requiredPath($config, 'database.ssl.ca'),
+            // Deliberately not configurable: encryption without server
+            // verification protects against nobody able to reach the connection.
+            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
         ];
+
+        if (!$hasCertificate) {
+            return $options;
+        }
+
+        $options[PDO::MYSQL_ATTR_SSL_CERT] = $this->requiredPath($config, 'database.ssl.cert');
+        $options[PDO::MYSQL_ATTR_SSL_KEY] = $this->requiredPath($config, 'database.ssl.key');
+
+        return $options;
+    }
+
+    private function requiredPath(Config $config, string $key): string
+    {
+        $path = $config->getString($key);
+
+        if ('' === $path) {
+            throw new DatabaseException(sprintf('Invalid configuration: %s must not be empty.', $key));
+        }
+
+        return $path;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function timeoutOptions(Config $config): array
+    {
+        if (!$config->has('database.connect_timeout')) {
+            return [];
+        }
+
+        $timeout = $config->getInt('database.connect_timeout');
+
+        if ($timeout < self::MIN_CONNECT_TIMEOUT || $timeout > self::MAX_CONNECT_TIMEOUT) {
+            throw new DatabaseException(sprintf(
+                'Invalid configuration: database.connect_timeout must be between %d and %d seconds, got %d.',
+                self::MIN_CONNECT_TIMEOUT,
+                self::MAX_CONNECT_TIMEOUT,
+                $timeout,
+            ));
+        }
+
+        return [PDO::ATTR_TIMEOUT => $timeout];
     }
 
     public function create(Config $config): PDO
@@ -199,7 +304,7 @@ final class MariaDbConnectionFactory
             $this->dsn($config),
             $this->username($config),
             $this->password($config),
-            $this->options(),
+            $this->options($config),
         );
     }
 
@@ -209,7 +314,7 @@ final class MariaDbConnectionFactory
             $this->dsn($config),
             $this->migrationUsername($config),
             $this->migrationPassword($config),
-            $this->options(),
+            $this->options($config),
         );
     }
 }
