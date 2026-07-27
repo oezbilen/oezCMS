@@ -391,4 +391,39 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
 
         $this->runCommand(new BufferedOutput());
     }
+
+    public function testRejectsEmptyMigrationFileWithoutRecordingIt(): void
+    {
+        $this->writeMigrationFile('900_empty.sql', "\n");
+
+        try {
+            $this->runCommand(new BufferedOutput());
+
+            self::fail('Expected ConsoleException was not thrown.');
+        } catch (ConsoleException) {
+            // Expected: the file carries no statement.
+        }
+
+        // The driver rejects an empty query as well, but only after the
+        // migration has been recorded as started and then failed. A file with
+        // nothing to run must not reach the tracking table at all — otherwise
+        // an operator is left resolving a failure that never touched the schema.
+        $row = $this->database->fetchOne(
+            'SELECT status FROM oezcms_migration WHERE migration = :migration',
+            ['migration' => '900_empty.sql'],
+        );
+
+        self::assertNull($row);
+    }
+
+    public function testRejectsCommentOnlyObjectFile(): void
+    {
+        // Every object file in this project opens with a comment header, so a
+        // body that was emptied out leaves a file that still looks complete.
+        $this->writeObjectFile('routines', 'fn_test_empty.sql', "-- only a header, no statement\n");
+
+        $this->expectException(ConsoleException::class);
+
+        $this->runCommand(new BufferedOutput());
+    }
 }
