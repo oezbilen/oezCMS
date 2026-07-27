@@ -6,27 +6,53 @@ declare(strict_types=1);
 use OezCMS\Console\Application;
 use OezCMS\Console\CommandRegistry;
 use OezCMS\Console\DbDeployCommand;
+use OezCMS\Console\ExitCode;
 use OezCMS\Console\Input;
 use OezCMS\Console\StreamOutput;
 use OezCMS\Console\VersionCommand;
 use OezCMS\Core\Config;
+use OezCMS\Core\Environment;
 use OezCMS\Core\Kernel;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-$kernel = new Kernel(dirname(__DIR__) . '/.env');
-$container = $kernel->boot();
-$config = $container->get(Config::class);
+$root = dirname(__DIR__);
+$envFile = $root . '/.env';
+$errorOutput = new StreamOutput(STDERR);
 
-$registry = new CommandRegistry();
-$registry->register(new VersionCommand());
-$registry->register(new DbDeployCommand($container, dirname(__DIR__) . '/database'));
+// The guard begins right after the autoloader, the earliest point at which
+// anything can be reported: Kernel::boot() validates the environment file
+// and the configuration, and Application only exists once that succeeded.
+try {
+    $container = (new Kernel($envFile))->boot();
+    $config = $container->get(Config::class);
 
-$application = new Application($registry, $config->getBool('app.debug'));
+    $registry = new CommandRegistry();
+    $registry->register(new VersionCommand());
+    $registry->register(new DbDeployCommand($container, $root . '/database'));
 
-/** @var list<string> $argv */
-exit($application->run(
-    Input::fromArgv($argv),
-    new StreamOutput(STDOUT),
-    new StreamOutput(STDERR),
-)->value);
+    $application = new Application($registry, $config->getBool('app.debug'));
+
+    /** @var list<string> $argv */
+    $exitCode = $application->run(
+        Input::fromArgv($argv),
+        new StreamOutput(STDOUT),
+        $errorOutput,
+    );
+} catch (Throwable $exception) {
+    // Read from the environment rather than from the configuration, because
+    // the configuration is what failed to build. A .env that parsed is
+    // already exported to the process environment by this point, so its
+    // value still applies; only a broken file leaves the real environment as
+    // the sole source, and then it is the only truthful one.
+    $exitCode = ExitCode::Failure;
+
+    $errorOutput->writeLine(sprintf('Error: %s', $exception->getMessage()));
+
+    if ((new Environment($envFile))->getBool('APP_DEBUG')) {
+        $errorOutput->writeLine('');
+        $errorOutput->writeLine((string) $exception);
+    }
+}
+
+exit($exitCode->value);
