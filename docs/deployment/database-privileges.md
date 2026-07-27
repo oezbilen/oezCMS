@@ -101,3 +101,7 @@ A runtime account that can still create tables has not been restricted:
 -- Expected to fail as oezcms_runtime.
 CREATE TABLE privilege_check (id INT);
 ```
+
+## See also
+
+[database-connection.md](database-connection.md) — transport, TLS and timeout settings.
