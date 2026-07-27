@@ -75,7 +75,7 @@ final class DbDeployCommand implements Command
         }
 
         if ([] === $migrationFiles && [] === array_filter($objectFiles)) {
-            $output->writeLine('Deployed 0 object(s).');
+            $output->writeLine('Nothing to deploy.');
 
             return ExitCode::Success;
         }
@@ -84,17 +84,23 @@ final class DbDeployCommand implements Command
         $this->acquireLock($database);
 
         try {
-            $deployed = $this->applyMigrations($database, $migrationFiles, $output);
+            $applied = $this->applyMigrations($database, $migrationFiles, $output);
 
             foreach ($objectFiles as $directory => $files) {
                 foreach ($files as $file) {
                     $database->executeRaw($this->readSqlFile($file));
                     $output->writeLine(sprintf('Applied %s/%s', $directory, basename($file)));
-                    ++$deployed;
                 }
             }
 
-            $output->writeLine(sprintf('Deployed %d object(s).', $deployed));
+            // Counted from the file lists rather than tallied while deploying:
+            // every file has run by the time this is reached, since a failure
+            // leaves through the exception instead.
+            $output->writeLine(sprintf('Migrations applied: %d', $applied));
+
+            foreach ($objectFiles as $directory => $files) {
+                $output->writeLine(sprintf('%s refreshed: %d', ucfirst($directory), count($files)));
+            }
 
             return ExitCode::Success;
         } finally {
