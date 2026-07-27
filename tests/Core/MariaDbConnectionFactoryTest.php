@@ -239,4 +239,42 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
         $factory->migrationUsername($config);
     }
+
+    public function testRejectsUnsupportedCharset(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn(new Config(['database' => ['name' => 'oezcms', 'charset' => 'latin1']]));
+    }
+
+    public function testRejectsPortBelowTheValidRange(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn(new Config(['database' => ['name' => 'oezcms', 'port' => 0]]));
+    }
+
+    public function testRejectsPortAboveTheValidRange(): void
+    {
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn(new Config(['database' => ['name' => 'oezcms', 'port' => 70000]]));
+    }
+
+    public function testRejectsEmptyHost(): void
+    {
+        // getString only falls back for a missing or non-string value, so an
+        // explicitly empty DB_HOST reached the DSN as "host=".
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+
+        $factory->dsn(new Config(['database' => ['name' => 'oezcms', 'host' => '']]));
+    }
 }

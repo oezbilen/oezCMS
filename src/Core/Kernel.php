@@ -19,6 +19,15 @@ final class Kernel
         'DB_MIGRATION_PASSWORD' => 'password',
     ];
 
+    private const string PRODUCTION_ENVIRONMENT = 'production';
+
+    private const array APP_ENVIRONMENTS = [
+        self::PRODUCTION_ENVIRONMENT,
+        'staging',
+        'development',
+        'testing',
+    ];
+
     public function __construct(private readonly string $envFile)
     {
     }
@@ -52,6 +61,23 @@ final class Kernel
 
     private function buildConfig(Environment $environment): Config
     {
+        $appEnvironment = $environment->getString('APP_ENV', self::PRODUCTION_ENVIRONMENT);
+        $debug = $environment->getBool('APP_DEBUG');
+
+        if (!in_array($appEnvironment, self::APP_ENVIRONMENTS, true)) {
+            throw new EnvironmentException(sprintf(
+                'Invalid configuration: APP_ENV must be one of %s, got "%s".',
+                implode(', ', self::APP_ENVIRONMENTS),
+                $appEnvironment,
+            ));
+        }
+
+        if (self::PRODUCTION_ENVIRONMENT === $appEnvironment && $debug) {
+            throw new EnvironmentException(
+                'Invalid configuration: APP_DEBUG must be disabled when APP_ENV is production.',
+            );
+        }
+
         $database = [];
 
         foreach (self::DATABASE_STRING_KEYS as $environmentKey => $configKey) {
@@ -80,8 +106,8 @@ final class Kernel
 
         return new Config([
             'app' => [
-                'env' => $environment->getString('APP_ENV', 'production'),
-                'debug' => $environment->getBool('APP_DEBUG'),
+                'env' => $appEnvironment,
+                'debug' => $debug,
             ],
             'database' => $database,
         ]);

@@ -7,6 +7,7 @@ namespace OezCMS\Tests\Core;
 use OezCMS\Core\Config;
 use OezCMS\Core\Database;
 use OezCMS\Core\Environment;
+use OezCMS\Core\EnvironmentException;
 use OezCMS\Core\Kernel;
 use OezCMS\Core\MigrationDatabase;
 use PHPUnit\Framework\TestCase;
@@ -163,5 +164,25 @@ final class KernelTest extends TestCase
         $container = (new Kernel($this->envFile))->boot();
 
         self::assertTrue($container->has(MigrationDatabase::class));
+    }
+
+    public function testRejectsUnknownAppEnvironment(): void
+    {
+        file_put_contents($this->envFile, "APP_ENV=prod\nDB_NAME=oezcms\n");
+
+        $this->expectException(EnvironmentException::class);
+
+        (new Kernel($this->envFile))->boot();
+    }
+
+    public function testRejectsDebugInProduction(): void
+    {
+        // Rejected rather than forced off: silently discarding configuration is
+        // the failure mode the strict parser was written to end.
+        file_put_contents($this->envFile, "APP_ENV=production\nAPP_DEBUG=true\nDB_NAME=oezcms\n");
+
+        $this->expectException(EnvironmentException::class);
+
+        (new Kernel($this->envFile))->boot();
     }
 }
