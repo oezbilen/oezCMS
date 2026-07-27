@@ -11,6 +11,8 @@ final class MariaDbConnectionFactory
     private const string DEFAULT_HOST = '127.0.0.1';
     private const int DEFAULT_PORT = 3306;
     private const string DEFAULT_CHARSET = 'utf8mb4';
+    private const int MIN_PORT = 1;
+    private const int MAX_PORT = 65535;
 
     private const string SQL_MODE_INIT_COMMAND = 'SET SESSION sql_mode = IF('
         . "FIND_IN_SET('ONLY_FULL_GROUP_BY', @@SESSION.sql_mode) > 0,"
@@ -28,11 +30,63 @@ final class MariaDbConnectionFactory
 
         return sprintf(
             'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-            $config->getString('database.host', self::DEFAULT_HOST),
-            $config->getInt('database.port', self::DEFAULT_PORT),
+            $this->host($config),
+            $this->port($config),
             $name,
-            $config->getString('database.charset', self::DEFAULT_CHARSET),
+            $this->charset($config),
         );
+    }
+
+    /**
+     * An empty host is rejected rather than replaced by the default. getString
+     * falls back only for a missing or non-string value, so DB_HOST= would
+     * otherwise reach the DSN as "host=" and fail as a driver error.
+     */
+    private function host(Config $config): string
+    {
+        $host = $config->getString('database.host', self::DEFAULT_HOST);
+
+        if ('' === $host) {
+            throw new DatabaseException('Invalid configuration: database.host must not be empty.');
+        }
+
+        return $host;
+    }
+
+    private function port(Config $config): int
+    {
+        $port = $config->getInt('database.port', self::DEFAULT_PORT);
+
+        if ($port < self::MIN_PORT || $port > self::MAX_PORT) {
+            throw new DatabaseException(sprintf(
+                'Invalid configuration: database.port must be between %d and %d, got %d.',
+                self::MIN_PORT,
+                self::MAX_PORT,
+                $port,
+            ));
+        }
+
+        return $port;
+    }
+
+    /**
+     * The schema is fixed to utf8mb4_uca1400_ai_ci, so no other connection
+     * charset is ever correct. The key stays readable so that a wrong value is
+     * reported rather than quietly ignored.
+     */
+    private function charset(Config $config): string
+    {
+        $charset = $config->getString('database.charset', self::DEFAULT_CHARSET);
+
+        if (self::DEFAULT_CHARSET !== $charset) {
+            throw new DatabaseException(sprintf(
+                'Invalid configuration: database.charset must be %s, got "%s".',
+                self::DEFAULT_CHARSET,
+                $charset,
+            ));
+        }
+
+        return $charset;
     }
 
     /**
