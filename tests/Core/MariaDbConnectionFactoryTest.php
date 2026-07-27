@@ -67,7 +67,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
     public function testOptionsDisableMultiStatementExecution(): void
     {
-        $options = (new MariaDbConnectionFactory())->options();
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
 
         self::assertArrayHasKey(PDO::MYSQL_ATTR_MULTI_STATEMENTS, $options);
         self::assertFalse($options[PDO::MYSQL_ATTR_MULTI_STATEMENTS]);
@@ -75,7 +75,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
     public function testOptionsAppendOnlyFullGroupByToSessionSqlMode(): void
     {
-        $options = (new MariaDbConnectionFactory())->options();
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
 
         self::assertArrayHasKey(PDO::MYSQL_ATTR_INIT_COMMAND, $options);
 
@@ -89,7 +89,7 @@ final class MariaDbConnectionFactoryTest extends TestCase
 
     public function testOptionsKeepSecurePdoDefaults(): void
     {
-        $options = (new MariaDbConnectionFactory())->options();
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
 
         self::assertSame(PDO::ERRMODE_EXCEPTION, $options[PDO::ATTR_ERRMODE]);
         self::assertSame(PDO::FETCH_ASSOC, $options[PDO::ATTR_DEFAULT_FETCH_MODE]);
