@@ -299,12 +299,23 @@ final class DbDeployCommand implements Command
     }
 
     /**
+     * Migrations run in filename order, so the order is part of the contract
+     * rather than a convenience. glob() already sorts; sorting explicitly says
+     * that the deploy depends on it, instead of leaving a reader to work out
+     * whether it merely happens to hold.
+     *
      * @return list<string>
      */
     private function sqlFiles(string $directory): array
     {
         $files = glob($this->databasePath . '/' . $directory . '/*.sql');
 
-        return false === $files ? [] : $files;
+        if (false === $files) {
+            return [];
+        }
+
+        sort($files, SORT_STRING);
+
+        return $files;
     }
 }
