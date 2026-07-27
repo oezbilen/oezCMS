@@ -38,11 +38,15 @@ final class ConsoleBootstrapTest extends TestCase
     }
 
     /**
-     * @param list<string> $arguments
+     * @param list<string>          $arguments
+     * @param array<string, string> $environment Merged into the inherited environment
      */
-    private function runConsole(array $arguments): Process
+    private function runConsole(array $arguments, array $environment = []): Process
     {
-        $process = new Process([PHP_BINARY, dirname(__DIR__, 2) . '/bin/console', ...$arguments]);
+        $process = new Process(
+            [PHP_BINARY, dirname(__DIR__, 2) . '/bin/console', ...$arguments],
+            env: $environment,
+        );
         $process->run();
 
         return $process;
@@ -53,5 +57,25 @@ final class ConsoleBootstrapTest extends TestCase
         $process = $this->runConsole([]);
 
         self::assertStringContainsString('db:deploy', $process->getErrorOutput());
+    }
+
+    public function testBootstrapFailureIsReportedWithoutAStackTrace(): void
+    {
+        // A rejected APP_ENV fails inside Kernel::boot(), before the Application
+        // exists that would otherwise translate the exception.
+        $process = $this->runConsole(['version'], ['APP_ENV' => 'nonsense']);
+
+        self::assertSame(1, $process->getExitCode());
+        self::assertStringContainsString('Error: Invalid configuration: APP_ENV', $process->getErrorOutput());
+        self::assertStringNotContainsString('Stack trace', $process->getErrorOutput());
+        self::assertSame('', $process->getOutput());
+    }
+
+    public function testBootstrapFailureWritesDiagnosticsInDebugMode(): void
+    {
+        $process = $this->runConsole(['version'], ['APP_ENV' => 'nonsense', 'APP_DEBUG' => 'true']);
+
+        self::assertSame(1, $process->getExitCode());
+        self::assertStringContainsString('EnvironmentException', $process->getErrorOutput());
     }
 }
