@@ -84,6 +84,28 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         self::assertSame([['code' => 'en'], ['code' => 'de']], $rows);
     }
 
+    public function testSeededLocalesReachTheDefaultLocale(): void
+    {
+        // Reachability, not adjacency: a regional locale may sit behind its parent
+        // (de-at -> de -> en) and still satisfy this. What it does catch is a locale
+        // with no fallback at all, a chain rooted somewhere other than the default,
+        // and a chain so deep that v_i18n_locale_chains stops before reaching it.
+        $rows = $this->database->fetchAll(
+            'SELECT l.code
+               FROM locales AS l
+              WHERE l.is_default = FALSE
+                AND NOT EXISTS (
+                    SELECT 1
+                      FROM v_i18n_locale_chains AS c
+                      JOIN locales AS d ON d.id = c.locale_id AND d.is_default = TRUE
+                     WHERE c.root_locale_id = l.id
+                )
+              ORDER BY l.sort_order',
+        );
+
+        self::assertSame([], $rows);
+    }
+
     public function testRejectsInvalidLocaleCode(): void
     {
         $this->createLocale('xa');
@@ -340,7 +362,7 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         $row = $this->database->fetchOne("SELECT fn_i18n_locale_id_from_code('de') AS id");
 
         self::assertNotNull($row);
-        self::assertSame(2, $row['id']);
+        self::assertSame($this->localeId('de'), $row['id']);
     }
 
     public function testLocaleIdFromCodeNormalizesInput(): void
@@ -348,7 +370,7 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         $row = $this->database->fetchOne("SELECT fn_i18n_locale_id_from_code('  DE ') AS id");
 
         self::assertNotNull($row);
-        self::assertSame(2, $row['id']);
+        self::assertSame($this->localeId('de'), $row['id']);
     }
 
     public function testLocaleIdFromCodeReturnsNullForUnknownOrInactiveLocale(): void
@@ -372,7 +394,7 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         );
 
         self::assertNotNull($row);
-        self::assertSame(1, $row['resolved']);
+        self::assertSame($this->localeId('en'), $row['resolved']);
     }
 
     public function testRejectsTwoNodeFallbackCycle(): void
