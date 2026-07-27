@@ -61,9 +61,10 @@ final class ConsoleBootstrapTest extends TestCase
 
     public function testBootstrapFailureIsReportedWithoutAStackTrace(): void
     {
-        // A rejected APP_ENV fails inside Kernel::boot(), before the Application
-        // exists that would otherwise translate the exception.
-        $process = $this->runConsole(['version'], ['APP_ENV' => 'nonsense']);
+        // Both values are explicit because phpunit.xml forces APP_DEBUG on for
+        // the test run and Process inherits the parent environment: a test
+        // about the non-debug output has to state that itself.
+        $process = $this->runConsole(['version'], ['APP_ENV' => 'nonsense', 'APP_DEBUG' => 'false']);
 
         self::assertSame(1, $process->getExitCode());
         self::assertStringContainsString('Error: Invalid configuration: APP_ENV', $process->getErrorOutput());
