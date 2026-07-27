@@ -28,13 +28,38 @@ final class MariaDbConnectionFactory
             throw new DatabaseException('Missing required configuration: database.name');
         }
 
-        return sprintf(
-            'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-            $this->host($config),
-            $this->port($config),
-            $name,
-            $this->charset($config),
-        );
+        $target = sprintf('dbname=%s;charset=%s', $name, $this->charset($config));
+
+        if (!$config->has('database.socket')) {
+            return sprintf('mysql:host=%s;port=%d;%s', $this->host($config), $this->port($config), $target);
+        }
+
+        return sprintf('mysql:unix_socket=%s;%s', $this->socket($config), $target);
+    }
+
+    /**
+     * A socket and a host describe different transports, so configuring both is
+     * rejected rather than resolved by precedence — the losing value would stay
+     * in the file looking like it takes effect.
+     */
+    private function socket(Config $config): string
+    {
+        foreach (['database.host', 'database.port'] as $key) {
+            if ($config->has($key)) {
+                throw new DatabaseException(sprintf(
+                    'Invalid configuration: database.socket cannot be combined with %s.',
+                    $key,
+                ));
+            }
+        }
+
+        $socket = $config->getString('database.socket');
+
+        if ('' === $socket) {
+            throw new DatabaseException('Invalid configuration: database.socket must not be empty.');
+        }
+
+        return $socket;
     }
 
     /**
