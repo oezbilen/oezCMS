@@ -41,6 +41,18 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         return $this->database->lastInsertId();
     }
 
+    private function createSystemTranslationKey(string $domain, string $key): string
+    {
+        $keyId = $this->createTranslationKey($domain, $key);
+
+        $this->database->execute(
+            'UPDATE translation_keys SET is_system = TRUE WHERE id = :id',
+            ['id' => $keyId],
+        );
+
+        return $keyId;
+    }
+
     private function addTranslation(string $keyId, string $localeCode, string $value): void
     {
         $this->database->execute(
@@ -229,11 +241,7 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
 
     public function testProtectsSystemKeysFromSoftDelete(): void
     {
-        $keyId = $this->createTranslationKey('core', 'welcome');
-        $this->database->execute(
-            'UPDATE translation_keys SET is_system = TRUE WHERE id = :id',
-            ['id' => $keyId],
-        );
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
 
         $this->expectException(DatabaseException::class);
 
@@ -241,6 +249,78 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
             'UPDATE translation_keys SET deleted_at = NOW(3) WHERE id = :id',
             ['id' => $keyId],
         );
+    }
+
+    public function testProtectsSystemKeysFromRenaming(): void
+    {
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/A system translation key cannot be renamed/');
+
+        $this->database->execute(
+            'UPDATE translation_keys SET translation_key = :key WHERE id = :id',
+            ['key' => 'greeting', 'id' => $keyId],
+        );
+    }
+
+    public function testProtectsSystemKeysFromChangingDomain(): void
+    {
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/A system translation key cannot be renamed/');
+
+        $this->database->execute(
+            'UPDATE translation_keys SET domain = :domain WHERE id = :id',
+            ['domain' => 'other', 'id' => $keyId],
+        );
+    }
+
+    public function testProtectsSystemKeysFromLosingProtection(): void
+    {
+        // Without this rule the protection is a two-step bypass, and the CHECK
+        // constraint cannot see it: clearing the flag and setting deleted_at in
+        // one statement leaves a row state the constraint accepts.
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/A system translation key cannot lose its protection/');
+
+        $this->database->execute(
+            'UPDATE translation_keys SET is_system = FALSE, deleted_at = NOW(3) WHERE id = :id',
+            ['id' => $keyId],
+        );
+    }
+
+    public function testProtectsSystemKeysFromHardDelete(): void
+    {
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/A system translation key cannot be deleted/');
+
+        $this->database->execute('DELETE FROM translation_keys WHERE id = :id', ['id' => $keyId]);
+    }
+
+    public function testAllowsReorderingSystemKeys(): void
+    {
+        // The boundary: a system key is protected in its identity, not frozen.
+        // Sort order is presentation.
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
+
+        $this->database->execute(
+            'UPDATE translation_keys SET sort_order = 5 WHERE id = :id',
+            ['id' => $keyId],
+        );
+
+        $row = $this->database->fetchOne(
+            'SELECT sort_order FROM translation_keys WHERE id = :id',
+            ['id' => $keyId],
+        );
+
+        self::assertNotNull($row);
+        self::assertSame(5, $row['sort_order']);
     }
 
     public function testMissingTranslationsViewListsGaps(): void
