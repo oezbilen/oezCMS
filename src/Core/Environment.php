@@ -9,6 +9,8 @@ final class Environment
     /** @var array<string, string> */
     private array $variables = [];
 
+    private const string KEY_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]*$/';
+
     public function __construct(private readonly string $envFile)
     {
     }
@@ -21,7 +23,9 @@ final class Environment
             );
         }
 
-        $lines = file($this->envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        // Empty lines are skipped below rather than by file(), which would
+        // renumber the remaining ones and misreport every error position.
+        $lines = file($this->envFile, FILE_IGNORE_NEW_LINES);
 
         if (false === $lines) {
             throw new EnvironmentException(
@@ -29,82 +33,167 @@ final class Environment
             );
         }
 
-        foreach ($lines as $line) {
+        $seen = [];
+
+        foreach ($lines as $index => $line) {
+            $number = $index + 1;
             $line = trim($line);
 
-            // ignore comments
-            if (str_starts_with($line, '#')) {
+            if ('' === $line || str_starts_with($line, '#')) {
                 continue;
             }
 
-            // key=value parsing
-            if (!str_contains($line, '=')) {
-                continue;
+            [$key, $value] = $this->parseAssignment($line, $number);
+
+            if (isset($seen[$key])) {
+                throw $this->syntaxError($number, sprintf('duplicate key "%s"', $key));
             }
 
-            $parts = explode('=', $line, 2);
-            $key = trim($parts[0]);
+            $seen[$key] = true;
 
-            $value = trim($parts[1] ?? '');
-            $value = $this->stripInlineComment($value);
-            $value = $this->stripQuotes($value);
-
-            if ('' === $key) {
-                continue;
-            }
-
-            if (isset($_ENV[$key]) || isset($_SERVER[$key]) || false !== getenv($key)) {
-                $existing = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
-
-                if (is_string($existing)) {
-                    $this->variables[$key] = $existing;
-                }
-
-                continue;
-            }
-
-            $this->variables[$key] = $value;
-            $_ENV[$key] = $value;
-            $_SERVER[$key] = $value;
-            putenv(sprintf('%s=%s', $key, $value));
+            $this->define($key, $value);
         }
     }
 
-    private function stripQuotes(string $value): string
+    /**
+     * @return array{string, string}
+     */
+    private function parseAssignment(string $line, int $number): array
     {
-        if (strlen($value) < 2) {
-            return $value;
+        $position = strpos($line, '=');
+
+        if (false === $position) {
+            throw $this->syntaxError($number, 'expected KEY=VALUE');
         }
 
-        $first = $value[0];
-        $last = $value[strlen($value) - 1];
+        $key = rtrim(substr($line, 0, $position));
 
-        if (('"' === $first && '"' === $last) || ("'" === $first && "'" === $last)) {
-            return substr($value, 1, -1);
+        if (1 !== preg_match(self::KEY_PATTERN, $key)) {
+            throw $this->syntaxError($number, sprintf('invalid key "%s"', $key));
         }
 
-        return $value;
+        return [$key, $this->parseValue(ltrim(substr($line, $position + 1)), $number)];
+    }
+
+    private function parseValue(string $value, int $number): string
+    {
+        if ('' === $value) {
+            return '';
+        }
+
+        return match ($value[0]) {
+            '"' => $this->parseDoubleQuoted($value, $number),
+            "'" => $this->parseSingleQuoted($value, $number),
+            default => $this->stripInlineComment($value),
+        };
+    }
+
+    /**
+     * Single quotes are literal: no escapes, so a value may not contain one.
+     */
+    private function parseSingleQuoted(string $value, int $number): string
+    {
+        $closing = strpos($value, "'", 1);
+
+        if (false === $closing) {
+            throw $this->syntaxError($number, 'unterminated quoted value');
+        }
+
+        $this->assertOnlyCommentFollows(substr($value, $closing + 1), $number);
+
+        return substr($value, 1, $closing - 1);
+    }
+
+    /**
+     * Double quotes support \" \\ \n and \t. The escape handling is the point:
+     * scanning for the next quote would stop at an escaped one and silently
+     * truncate the value.
+     */
+    private function parseDoubleQuoted(string $value, int $number): string
+    {
+        $result = '';
+        $length = strlen($value);
+
+        for ($index = 1; $index < $length; ++$index) {
+            $character = $value[$index];
+
+            if ('"' === $character) {
+                $this->assertOnlyCommentFollows(substr($value, $index + 1), $number);
+
+                return $result;
+            }
+
+            if ('\\' !== $character) {
+                $result .= $character;
+
+                continue;
+            }
+
+            ++$index;
+
+            if ($index >= $length) {
+                throw $this->syntaxError($number, 'unterminated escape sequence');
+            }
+
+            $result .= match ($value[$index]) {
+                '"' => '"',
+                '\\' => '\\',
+                'n' => "\n",
+                't' => "\t",
+                default => throw $this->syntaxError(
+                    $number,
+                    sprintf('unknown escape sequence "\\%s"', $value[$index]),
+                ),
+            };
+        }
+
+        throw $this->syntaxError($number, 'unterminated quoted value');
+    }
+
+    private function assertOnlyCommentFollows(string $rest, int $number): void
+    {
+        $rest = trim($rest);
+
+        if ('' === $rest || str_starts_with($rest, '#')) {
+            return;
+        }
+
+        throw $this->syntaxError($number, 'unexpected characters after quoted value');
     }
 
     private function stripInlineComment(string $value): string
     {
-        if ('' !== $value && ('"' === $value[0] || "'" === $value[0])) {
-            $closing = strpos($value, $value[0], 1);
-
-            if (false !== $closing) {
-                return substr($value, 0, $closing + 1);
-            }
-
-            return $value;
-        }
-
         $position = strpos($value, ' #');
 
-        if (false !== $position) {
-            return rtrim(substr($value, 0, $position));
+        return false === $position ? $value : rtrim(substr($value, 0, $position));
+    }
+
+    private function syntaxError(int $number, string $reason): EnvironmentException
+    {
+        return new EnvironmentException(sprintf(
+            'Invalid environment syntax in "%s" at line %d: %s.',
+            $this->envFile,
+            $number,
+            $reason,
+        ));
+    }
+
+    private function define(string $key, string $value): void
+    {
+        if (isset($_ENV[$key]) || isset($_SERVER[$key]) || false !== getenv($key)) {
+            $existing = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+            if (is_string($existing)) {
+                $this->variables[$key] = $existing;
+            }
+
+            return;
         }
 
-        return $value;
+        $this->variables[$key] = $value;
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+        putenv(sprintf('%s=%s', $key, $value));
     }
 
     public function get(string $key): ?string
