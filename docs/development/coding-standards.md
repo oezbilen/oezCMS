@@ -70,18 +70,33 @@ No exceptions.
 
 # Namespaces
 
-Namespaces follow the PSR-4 structure.
+Namespaces follow the PSR-4 structure and must match the directory structure.
 
-Example:
+The namespace also states which layer a file belongs to. The layers and the rules between
+them are described in [module-boundaries.md](module-boundaries.md).
 
 ```text
 OezCMS\Core
-OezCMS\Database
-OezCMS\Security
 OezCMS\Console
+OezCMS\Http
+OezCMS\Modules\<Name>
 ```
 
-Namespaces must match the directory structure.
+One namespace per file, declared with a semicolon. The bracketed form is not used.
+
+A class from this project is always imported, never written out fully qualified in a file
+body:
+
+```php
+use OezCMS\Console\Output;
+
+$output = new Output();                  // yes
+$output = new \OezCMS\Console\Output();  // no
+```
+
+This is not a matter of taste. The architecture test reads imports to decide whether a
+boundary was crossed, so an inline reference would pass through it unseen. Both rules are
+enforced by `tests/Architecture/LayerBoundaryTest.php`.
 
 ---
 
