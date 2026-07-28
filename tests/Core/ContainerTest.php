@@ -124,9 +124,26 @@ final class ContainerTest extends TestCase
         self::assertNull($reference->get());
     }
 
-    public function testIsAPsrContainer(): void
+    public function testIsUsableThroughThePsrInterface(): void
     {
-        self::assertInstanceOf(ContainerInterface::class, new Container());
+        $container = new Container();
+        $container->instance(stdClass::class, new stdClass());
+
+        $this->assertResolvesThroughPsrContainer($container, stdClass::class);
+    }
+
+    /**
+     * The parameter type is the assertion. Passing a Container here only type-
+     * checks, and only runs, while Container is a PSR-11 container — and unlike
+     * assertInstanceOf it describes what the interface is for instead of
+     * restating a declaration the analyser can already read.
+     *
+     * @param class-string $id
+     */
+    private function assertResolvesThroughPsrContainer(ContainerInterface $container, string $id): void
+    {
+        self::assertTrue($container->has($id));
+        self::assertInstanceOf($id, $container->get($id));
     }
 
     public function testUnknownServiceThrowsPsrNotFoundException(): void

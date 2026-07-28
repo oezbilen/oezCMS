@@ -13,3 +13,12 @@ parameters:
         - public
         - src
         - tests
+    ignoreErrors:
+        # PSR-11 types its identifier as a plain string; ours is a class-string,
+        # which is what lets get() return a known type instead of mixed at every
+        # call site. The narrowing exists only in the annotation: the native
+        # signature accepts any string, and an unknown one is answered with
+        # ServiceNotFoundException exactly as the interface requires.
+        - identifier: method.childParameterType
+          path: src/Core/Container.php
+          count: 1
