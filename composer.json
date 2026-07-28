@@ -28,6 +28,7 @@
         "ext-openssl": "*",
         "ext-sodium": "*",
         "ext-mbstring": "*",
+        "psr/container": "^2.0",
         "twig/twig": "^3.21",
         "web-auth/webauthn-lib": "^5.2"
     },

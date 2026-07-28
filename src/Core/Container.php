@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 namespace OezCMS\Core;
 
-final class Container
+use Psr\Container\ContainerInterface;
+
+/**
+ * PSR-11 is what plugins receive; class-string keys are what this project
+ * registers under. The interface takes any string, and an unknown one is
+ * answered with ServiceNotFoundException like any other — it is not an
+ * invitation to register services under arbitrary names.
+ */
+final class Container implements ContainerInterface
 {
     /**
      * @var array<class-string, callable(self): object>
@@ -64,7 +72,7 @@ final class Container
         }
 
         if (!isset($this->factories[$id])) {
-            throw new ContainerException(sprintf('Service not registered: %s', $id));
+            throw new ServiceNotFoundException(sprintf('Service not registered: %s', $id));
         }
 
         if (isset($this->resolving[$id])) {

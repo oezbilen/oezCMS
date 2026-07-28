@@ -7,6 +7,9 @@ namespace OezCMS\Tests\Core;
 use OezCMS\Core\Container;
 use OezCMS\Core\ContainerException;
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use stdClass;
 use WeakReference;
 
@@ -119,5 +122,59 @@ final class ContainerTest extends TestCase
         unset($captured);
 
         self::assertNull($reference->get());
+    }
+
+    public function testIsUsableThroughThePsrInterface(): void
+    {
+        $container = new Container();
+        $container->instance(stdClass::class, new stdClass());
+
+        $this->assertResolvesThroughPsrContainer($container, stdClass::class);
+    }
+
+    /**
+     * The parameter type is the assertion. Passing a Container here only type-
+     * checks, and only runs, while Container is a PSR-11 container — and unlike
+     * assertInstanceOf it describes what the interface is for instead of
+     * restating a declaration the analyser can already read.
+     *
+     * @param class-string $id
+     */
+    private function assertResolvesThroughPsrContainer(ContainerInterface $container, string $id): void
+    {
+        self::assertTrue($container->has($id));
+        self::assertInstanceOf($id, $container->get($id));
+    }
+
+    public function testUnknownServiceThrowsPsrNotFoundException(): void
+    {
+        $container = new Container();
+
+        $this->expectException(NotFoundExceptionInterface::class);
+
+        $container->get(stdClass::class);
+    }
+
+    public function testCircularDependencyIsAContainerErrorAndNotANotFound(): void
+    {
+        $container = new Container();
+        $container->set(
+            stdClass::class,
+            static fn (Container $c): stdClass => $c->get(stdClass::class),
+        );
+
+        // Written as a catch rather than expectException because the point is
+        // what the exception is NOT. A wiring cycle is a container error; if it
+        // also answered to NotFound, a plugin handling a missing service would
+        // quietly swallow a bug in its own registration.
+        try {
+            $container->get(stdClass::class);
+        } catch (ContainerExceptionInterface $exception) {
+            self::assertNotInstanceOf(NotFoundExceptionInterface::class, $exception);
+
+            return;
+        }
+
+        self::fail('Expected a PSR-11 container exception.');
     }
 }
