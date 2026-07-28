@@ -83,6 +83,21 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
         );
     }
 
+    private function createOrRestoreTranslationKey(string $domain, string $key): int
+    {
+        $resultSets = $this->database->callProcedure(
+            'sp_i18n_create_translation_key',
+            ['domain' => $domain, 'translation_key' => $key],
+        );
+
+        self::assertArrayHasKey(0, $resultSets);
+        self::assertArrayHasKey(0, $resultSets[0]);
+        self::assertArrayHasKey('id', $resultSets[0][0]);
+        self::assertIsInt($resultSets[0][0]['id']);
+
+        return $resultSets[0][0]['id'];
+    }
+
     public function testDeploySeedsActiveEnglishAndGerman(): void
     {
         $rows = $this->database->fetchAll(
@@ -647,5 +662,51 @@ final class I18nIntegrationTest extends SchemaDeploymentTestCase
 
         self::assertNotNull($row);
         self::assertNull($row['resolved']);
+    }
+
+    public function testCreatesATranslationKeyThatDoesNotExistYet(): void
+    {
+        $keyId = $this->createOrRestoreTranslationKey('core', 'welcome');
+
+        $rows = $this->database->fetchAll(
+            'SELECT domain, translation_key, deleted_at FROM translation_keys WHERE id = :id',
+            ['id' => $keyId],
+        );
+
+        self::assertSame([['domain' => 'core', 'translation_key' => 'welcome', 'deleted_at' => null]], $rows);
+    }
+
+    public function testCreatingAnExistingKeyReturnsItsRow(): void
+    {
+        $keyId = $this->createTranslationKey('core', 'welcome');
+
+        self::assertSame((int) $keyId, $this->createOrRestoreTranslationKey('core', 'welcome'));
+    }
+
+    public function testRestoringASoftDeletedKeyKeepsItsTranslations(): void
+    {
+        $keyId = $this->createTranslationKey('core', 'welcome');
+        $this->addTranslation($keyId, 'de', 'Willkommen');
+        $this->softDeleteTranslationKey($keyId);
+
+        // Gone as far as translation is concerned...
+        self::assertSame('core.welcome', $this->translate('core', 'welcome', 'de'));
+
+        $restoredId = $this->createOrRestoreTranslationKey('core', 'welcome');
+
+        // ...and creating it again returns the row itself, not a replacement, so
+        // the values it collected come back with it. This is the whole point.
+        self::assertSame((int) $keyId, $restoredId);
+        self::assertSame('Willkommen', $this->translate('core', 'welcome', 'de'));
+    }
+
+    public function testCreatingAnExistingSystemKeyReturnsItsRow(): void
+    {
+        // The conflict path is an UPDATE and therefore passes through the trigger
+        // that guards system keys. Nothing about the row changes, so nothing may
+        // be refused.
+        $keyId = $this->createSystemTranslationKey('core', 'welcome');
+
+        self::assertSame((int) $keyId, $this->createOrRestoreTranslationKey('core', 'welcome'));
     }
 }
