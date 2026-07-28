@@ -3,6 +3,13 @@
 --
 -- Technical translation key definitions used as stable identifiers for localized texts.
 -- Supports domains, soft deletion, ordering, and protected system keys.
+--
+-- A domain and key pair identifies one row for the lifetime of the installation. The
+-- unique index is unconditional on purpose: soft deletion hides a key, it does not
+-- release its name. Translation values hang off the id, so a second row under the same
+-- identity would strand every value the first one had collected.
+--
+-- Restoring a key is therefore clearing deleted_at, not inserting it again.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE TABLE translation_keys (
@@ -22,20 +29,8 @@ CREATE TABLE translation_keys (
     deleted_at DATETIME(3) DEFAULT NULL COMMENT 'Soft-delete timestamp',
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    active_domain VARCHAR(100)
-        CHARACTER SET ascii
-        COLLATE ascii_bin
-        GENERATED ALWAYS AS (
-            IF(deleted_at IS NULL, domain, NULL)
-        ) VIRTUAL,
-    active_translation_key VARCHAR(255)
-        CHARACTER SET ascii
-        COLLATE ascii_bin
-        GENERATED ALWAYS AS (
-            IF(deleted_at IS NULL, translation_key, NULL)
-        ) VIRTUAL,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_translation_key_active (active_domain, active_translation_key),
+    UNIQUE KEY uk_translation_keys_identity (domain, translation_key),
     INDEX idx_translation_keys_domain_active_order (domain, deleted_at, sort_order, translation_key),
     CONSTRAINT chk_translation_keys_domain CHECK (domain REGEXP '^[a-z][a-z0-9]*([._-][a-z0-9]+)*$'),
     CONSTRAINT chk_translation_keys_key CHECK (translation_key REGEXP '^[a-z0-9]+([._-][a-z0-9]+)*$'),
