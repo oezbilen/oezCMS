@@ -33,7 +33,7 @@ All source code should follow these guidelines.
 The minimum supported version is:
 
 ```text
-PHP 8.4
+PHP 8.4.27
 ```
 
 Do not introduce compatibility code for older PHP versions.
