@@ -191,13 +191,13 @@ A Pull Request will be merged when:
 
 ## Architecture Rules
 
-The project follows a strict architecture:
-
-* Database-first design
-* Plugin-driven system
-* Dependency Injection via Kernel Container
-* No business logic in controllers or console entry points
-* Services must be testable in isolation
+* Database-first: a rule the database can hold lives in the schema
+  ([ADR 0008](../adr/0008-keep-domain-rules-in-the-database.md)).
+* Dependencies are injected through constructors; services are registered explicitly in
+  the Kernel's container.
+* Entry points contain no business logic.
+* Layer boundaries are checked by `tests/Architecture/LayerBoundaryTest.php`; see
+  [module-boundaries.md](../development/module-boundaries.md).
 
 ---
 

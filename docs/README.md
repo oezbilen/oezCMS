@@ -3,6 +3,10 @@
 Each topic has exactly one home. A new document goes into the area it belongs to and is
 listed here.
 
+## Architecture
+
+* [Architecture overview](architecture/overview.md) — building blocks, start-up, database accounts, what is not built yet
+
 ## Project
 
 * [Contributing](project/contributing.md) — requirements, setup, development principles, review process

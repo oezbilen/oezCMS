@@ -40,3 +40,6 @@ New records start from [the template](template.md).
 | 0005 | [Store timestamps as DATETIME(3) in UTC](0005-store-timestamps-as-datetime3-in-utc.md) | Accepted |
 | 0006 | [Reference seed rows by natural key](0006-reference-seed-rows-by-natural-key.md) | Accepted |
 | 0007 | [Track migrations as a state machine](0007-track-migrations-as-a-state-machine.md) | Accepted |
+| 0008 | [Keep domain rules in the database](0008-keep-domain-rules-in-the-database.md) | Accepted |
+| 0009 | [Organise code along one axis](0009-organise-code-along-one-axis.md) | Accepted |
+| 0010 | [Keep a container of our own](0010-keep-a-container-of-our-own.md) | Accepted |

@@ -28,20 +28,11 @@ A module not knowing `Console` or `Http` is the same idea pointed the other way:
 that cannot name a delivery mechanism cannot quietly become one delivery mechanism's
 feature.
 
-## Why one axis and not two
+## Why one axis
 
-A layered tree (`Domain`, `Application`, `Infrastructure`) alongside feature modules was
-considered and rejected. Both are reasonable orderings, but together they give every class
-two plausible homes: does i18n logic belong under `Domain/I18n` or `Modules/I18n/Domain`?
-That ambiguity is not a side effect of dumping grounds, it is how they form — when two
-answers are defensible, code lands wherever the author was looking.
-
-The second reason is specific to this project. oezCMS is database-first, and much of what
-a `Domain` layer would hold lives in MariaDB: `fn_i18n_translate` *is* the fallback rule,
-`v_i18n_locale_chains` *is* the chain model, the write guards are triggers. There is still
-no PHP class for i18n at all. A layer cake over a schema that already holds its own
-invariants produces mostly empty folders — and an empty folder with an authoritative name
-attracts whatever needs a home.
+A layered tree beside the modules was rejected: it gives every class two plausible homes,
+and much of what its domain layer would hold lives in the schema. The full reasoning is in
+[ADR 0009](../adr/0009-organise-code-along-one-axis.md).
 
 ## What a module publishes
 
