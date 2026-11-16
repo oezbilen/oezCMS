@@ -16,6 +16,7 @@ listed here.
 
 ## Development
 
+* [Development environment](development/environment.md) — requirements, setup, the `.env` format, running tests and quality gates
 * [Coding standards](development/coding-standards.md) — language rules, naming, formatting, static analysis
 * [Module boundaries](development/module-boundaries.md) — the layers, what each may depend on, how that is enforced
 * [PSR interfaces](development/psr-interfaces.md) — which PHP standards the project commits to, and when
