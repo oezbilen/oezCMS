@@ -53,11 +53,13 @@ The database schema, application architecture, and core infrastructure are being
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+Copyright (C) 2026 Mehmet Özbilen
 
-You are free to use, study, modify, and redistribute this software under the terms of the GPL v3. Any distributed modifications or derivative works must also be licensed under GPL v3 and the corresponding source code must be made available.
+oezCMS is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version** (SPDX: `GPL-3.0-or-later`).
 
-See the `LICENSE` file for the full license text.
+oezCMS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The full text of version 3 is in the `LICENSE` file. Contributions are accepted under the same license.
 
 ## Contributing
 
