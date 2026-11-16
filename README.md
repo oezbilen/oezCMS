@@ -47,9 +47,21 @@ AI is a supporting development tool. All code is reviewed, tested, and validated
 
 ## Project Status
 
-🚧 **This project is currently under active development.**
+🚧 **Under active development — not usable as a CMS yet.** Current version: `0.1.0-dev`.
 
-The database schema, application architecture, and core infrastructure are being designed before implementing application features.
+The foundation is built before the features that depend on it. What exists today:
+
+* **Runtime core** — strict `.env` parser, validated configuration, PSR-11 container, kernel
+* **Database layer** — PDO wrapper with nested transactions (savepoints) and stored procedure calls; TCP or socket connections, optional TLS
+* **Schema deployment** — `bin/console db:deploy` with tracked, checksummed migrations, a deploy lock and an optional separate migration account
+* **Internationalisation** — locales with fallback chains, translation keys and values; translations are resolved inside the database
+* **Quality gates** — PSR-12, PHPStan level 10, PHPUnit unit and integration suites against MariaDB 11, an architecture test for the layer boundaries
+
+Not built yet: the HTTP layer (there is no web entry point), users, authentication and RBAC, media, and the plugin system.
+
+## Documentation
+
+Start at [docs/README.md](docs/README.md).
 
 ## License
 
