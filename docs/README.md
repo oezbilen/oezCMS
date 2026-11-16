@@ -16,6 +16,10 @@ listed here.
 * [PSR interfaces](development/psr-interfaces.md) — which PHP standards the project commits to, and when
 * [Testing guidelines](development/testing-guidelines.md) — isolation, fixtures, database tests, CI
 
+## Database
+
+* [Schema conventions](database/schema-conventions.md) — names, keys, column types, collations, where an invariant goes
+
 ## Deployment
 
 * [Database connection](deployment/database-connection.md) — connection variables, socket or TCP, TLS, timeouts

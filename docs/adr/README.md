@@ -34,3 +34,9 @@ New records start from [the template](template.md).
 | #    | Decision                                                             | Status   |
 |------|----------------------------------------------------------------------|----------|
 | 0001 | [Record architecture decisions](0001-record-architecture-decisions.md) | Accepted |
+| 0002 | [Name schema objects by type and module](0002-name-schema-objects-by-type-and-module.md) | Accepted |
+| 0003 | [Store identifiers as ASCII binary columns](0003-store-identifiers-as-ascii-binary-columns.md) | Accepted |
+| 0004 | [Size surrogate keys to the table](0004-size-surrogate-keys-to-the-table.md) | Accepted |
+| 0005 | [Store timestamps as DATETIME(3) in UTC](0005-store-timestamps-as-datetime3-in-utc.md) | Accepted |
+| 0006 | [Reference seed rows by natural key](0006-reference-seed-rows-by-natural-key.md) | Accepted |
+| 0007 | [Track migrations as a state machine](0007-track-migrations-as-a-state-machine.md) | Accepted |
