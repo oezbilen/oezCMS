@@ -20,31 +20,8 @@ All contributors are expected to act respectfully and constructively.
 
 # Getting Started
 
-## Requirements
-
-Before contributing, ensure you have:
-
-* PHP 8.4.27 or higher
-* Composer installed
-* MariaDB 11 (for full integration testing)
-* Git
-
----
-
-## Setup
-
-```bash id="contrib2"
-git clone https://github.com/oezbilen/oezCMS.git
-cd oezCMS
-composer install
-cp .env.example .env
-```
-
-Run tests:
-
-```bash id="contrib3"
-vendor/bin/phpunit
-```
+Requirements, setup, the `.env` format and how to run the tests are described in
+[docs/development/environment.md](../development/environment.md).
 
 ---
 
