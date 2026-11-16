@@ -61,7 +61,7 @@ Not built yet: the HTTP layer (there is no web entry point), users, authenticati
 
 ## Documentation
 
-Start at [docs/README.md](docs/README.md).
+Start at [docs/README.md](docs/README.md). What comes next is in the [roadmap](docs/project/roadmap.md).
 
 ## License
 
