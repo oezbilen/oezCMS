@@ -24,7 +24,7 @@ All contributors are expected to act respectfully and constructively.
 
 Before contributing, ensure you have:
 
-* PHP 8.4 or higher
+* PHP 8.4.27 or higher
 * Composer installed
 * MariaDB 11 (for full integration testing)
 * Git
