@@ -456,21 +456,14 @@ Warnings must not be ignored without justification.
 
 # Architecture
 
-The project follows a database-first architecture.
+The structure of the system is described in
+[the architecture overview](../architecture/overview.md), the dependency rules between its
+parts in [module-boundaries.md](module-boundaries.md). For code written within it:
 
-Core principles:
-
-* Dependency Injection
-* Immutable configuration
-* Plugin-driven architecture
-* Separation of concerns
-* Single Responsibility Principle
-
-Business logic belongs in services.
-
-Bootstrap logic belongs in the Kernel.
-
-Console and HTTP entry points should remain thin.
+* A rule the database can enforce is enforced there, not in PHP.
+* Dependencies are passed in through the constructor.
+* Bootstrap logic belongs in the `Kernel`.
+* Console and HTTP entry points stay thin: they translate input and output and delegate.
 
 ---
 
