@@ -29,19 +29,19 @@
         "ext-sodium": "*",
         "ext-mbstring": "*",
         "psr/container": "^2.0",
-        "twig/twig": "^3.21",
-        "web-auth/webauthn-lib": "^5.2"
+        "twig/twig": "^3.30",
+        "web-auth/webauthn-lib": "^5.3"
     },
     "require-dev": {
         "ext-pdo_sqlite": "*",
         "captainhook/captainhook": "^5.29",
         "friendsofphp/php-cs-fixer": "^3.95",
-        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan": "^2.3",
         "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^13.2",
-        "rector/rector": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.1",
+        "phpstan/phpstan-strict-rules": "^2.1",
+        "phpunit/phpunit": "^13.4",
+        "rector/rector": "^2.8",
         "symfony/process": "^8.1"
     },
     "autoload": {
