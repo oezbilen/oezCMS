@@ -9,6 +9,7 @@ listed here.
 
 ## Project
 
+* [Roadmap](project/roadmap.md) — the phases in build order, what is done and what is open
 * [Contributing](project/contributing.md) — requirements, setup, development principles, review process
 * [Branching strategy](project/branching-strategy.md) — branch names, commits, pull requests, merging
 * [Release process](project/release-process.md) — versioning and the release workflow
