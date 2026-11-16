@@ -25,3 +25,7 @@ listed here.
 ## Security
 
 * [Security invariants](security/invariants.md) — every security goal as a testable statement, with its status
+
+## Decisions
+
+* [Architecture decision records](adr/README.md) — why the system is the way it is, one decision per record
