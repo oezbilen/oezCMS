@@ -45,9 +45,10 @@ Known deviation: the deploy tracking table is `oezcms_migration`, singular.
 
 `BOOLEAN` is `TINYINT(1)` and accepts any small integer, which is what the check is for.
 
-Times are UTC ([0005](../adr/0005-store-timestamps-as-datetime3-in-utc.md)). **This is not
-enforced yet:** `CURRENT_TIMESTAMP(3)` returns the session's time zone and the connection
-does not set one, so until it does, the database server must run in UTC.
+Times are UTC ([0005](../adr/0005-store-timestamps-as-datetime3-in-utc.md)). Every
+connection sets its session time zone to `+00:00`, so `CURRENT_TIMESTAMP(3)` returns UTC
+whatever zone the server runs in. A time produced in PHP and written to the database must
+be UTC as well; nothing does so yet.
 
 Soft deletion hides a row; it does not release its identity. Unique keys stay
 unconditional, and restoring means clearing `deleted_at`, not inserting again.
