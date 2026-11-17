@@ -16,11 +16,24 @@ final class MariaDbConnectionFactory
     private const int MIN_CONNECT_TIMEOUT = 1;
     private const int MAX_CONNECT_TIMEOUT = 60;
 
-    private const string SQL_MODE_INIT_COMMAND = 'SET SESSION sql_mode = IF('
+    /**
+     * One statement, because multi-statement execution is disabled for every
+     * connection, this init command included.
+     *
+     * sql_mode: ONLY_FULL_GROUP_BY is appended to the server's mode rather than
+     * replacing it, so stricter server settings stay in force.
+     *
+     * time_zone: DATETIME columns store what they are given and CURRENT_TIMESTAMP
+     * returns the session's local time, so the session is pinned to UTC. An
+     * offset rather than the name 'UTC', which resolves only on servers whose
+     * time zone tables are loaded.
+     */
+    private const string SESSION_INIT_COMMAND = 'SET SESSION sql_mode = IF('
         . "FIND_IN_SET('ONLY_FULL_GROUP_BY', @@SESSION.sql_mode) > 0,"
         . '@@SESSION.sql_mode,'
         . "CONCAT_WS(',', NULLIF(@@SESSION.sql_mode, ''), 'ONLY_FULL_GROUP_BY')"
-        . ')';
+        . '),'
+        . " SESSION time_zone = '+00:00'";
 
     public function dsn(Config $config): string
     {
@@ -218,7 +231,7 @@ final class MariaDbConnectionFactory
             PDO::ATTR_STRINGIFY_FETCHES => false,
             // Stacked queries are never legitimate in this code base.
             PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => self::SQL_MODE_INIT_COMMAND,
+            PDO::MYSQL_ATTR_INIT_COMMAND => self::SESSION_INIT_COMMAND,
         ] + $this->tlsOptions($config) + $this->timeoutOptions($config);
     }
 

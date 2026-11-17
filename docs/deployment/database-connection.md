@@ -83,6 +83,18 @@ Read and write timeouts are deliberately absent. PDO's MySQL driver does not exp
 them, and reaching them through `net_read_timeout` in the session init command would
 mean a second mechanism serving a third purpose.
 
+## Session settings
+
+Every connection runs one statement before it is used. Neither setting is configurable.
+
+| Setting | Value | Why |
+|---|---|---|
+| `sql_mode` | the server's mode plus `ONLY_FULL_GROUP_BY` | appended rather than replaced, so stricter server settings stay in force |
+| `time_zone` | `+00:00` | `CURRENT_TIMESTAMP` returns UTC whatever zone the server runs in ([ADR 0005](../adr/0005-store-timestamps-as-datetime3-in-utc.md)) |
+
+The offset is used rather than the name `UTC`, which resolves only on servers whose time
+zone tables are loaded.
+
 ## Recommended setups
 
 **Single server.** Socket, no TLS, separate deploy account:

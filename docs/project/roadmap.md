@@ -21,12 +21,12 @@ Done:
 * PHP 8.4.27 and current dependencies
 * Consistent license metadata (GPL-3.0-or-later)
 * Documentation index, decision records, database and architecture documentation
+* UTC enforced for every database session
 
 Open:
 
 * Development environment documentation, `.env.example`, a record of the `.env` format
 * `SECURITY.md`: how to report a vulnerability
-* Enforce UTC for the session time zone at connect ([ADR 0005](../adr/0005-store-timestamps-as-datetime3-in-utc.md))
 * Bring `oezcms_migration` in line with the plural naming rule, or record the exception
   ([ADR 0002](../adr/0002-name-schema-objects-by-type-and-module.md))
 * Correct the outdated comment in `trg_locales_before_update` (the read cap now lives in
