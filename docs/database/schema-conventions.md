@@ -16,8 +16,6 @@ is in the linked [decision records](../adr/README.md).
     COMMENT='…';
   ```
 
-Known deviation: the deploy tracking table is `oezcms_migration`, singular.
-
 ## Keys
 
 * The primary key is `id INT UNSIGNED NOT NULL AUTO_INCREMENT`. A lookup table whose size
