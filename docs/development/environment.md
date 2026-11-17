@@ -124,8 +124,11 @@ The integration tests read their connection from the process environment only. V
 TEST_DB_USERNAME=oezcms_test TEST_DB_PASSWORD='…' composer test:integration
 ```
 
-The tests deploy the schema and use the data through one connection, so the test account
-needs the full rights on its database.
+The tests deploy the schema and use the data through one connection, that is, as a single
+account. The schema tests therefore keep the deploy log where a single account keeps it, in
+`TEST_DB_NAME`: after a run, `oezcms_migrations` is found there. Only the tests covering a
+separate log database write to `TEST_DB_LOG_NAME`, and they drop their table again, so that
+database is normally empty. The test account needs full rights on both.
 
 > **The test database is wiped.** Before each schema test every event, trigger, view,
 > table and routine in `TEST_DB_NAME` is dropped and the schema is deployed fresh. Never
