@@ -38,7 +38,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
             $this->pdo->exec('DROP VIEW IF EXISTS test_migration_view');
             $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table');
             $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table_two');
-            $this->pdo->exec('DROP TABLE IF EXISTS oezcms_migration');
+            $this->pdo->exec('DROP TABLE IF EXISTS oezcms_migrations');
         }
 
         $files = glob($this->databasePath . '/*/*.sql');
@@ -105,7 +105,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
     {
         $row = $this->database->fetchOne(
             'SELECT checksum, status, started_at, completed_at, error_message'
-            . ' FROM oezcms_migration WHERE migration = :migration',
+            . ' FROM oezcms_migrations WHERE migration = :migration',
             ['migration' => $migration],
         );
 
@@ -258,7 +258,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         self::assertSame(ExitCode::Success, $this->runCommand(new BufferedOutput()));
 
         $this->database->execute(
-            "UPDATE oezcms_migration SET status = 'started', completed_at = NULL"
+            "UPDATE oezcms_migrations SET status = 'started', completed_at = NULL"
             . ' WHERE migration = :migration',
             ['migration' => '001_create_table.sql'],
         );
@@ -387,7 +387,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         self::assertSame('completed', $this->trackingRow('001_create_table.sql')['status']);
         self::assertSame('failed', $this->trackingRow('002_broken.sql')['status']);
         self::assertNull($this->database->fetchOne(
-            'SELECT migration FROM oezcms_migration WHERE migration = :migration',
+            'SELECT migration FROM oezcms_migrations WHERE migration = :migration',
             ['migration' => '003_seed.sql'],
         ));
     }
@@ -418,7 +418,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         // nothing to run must not reach the tracking table at all — otherwise
         // an operator is left resolving a failure that never touched the schema.
         $row = $this->database->fetchOne(
-            'SELECT status FROM oezcms_migration WHERE migration = :migration',
+            'SELECT status FROM oezcms_migrations WHERE migration = :migration',
             ['migration' => '900_empty.sql'],
         );
 
