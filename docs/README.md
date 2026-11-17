@@ -34,6 +34,7 @@ listed here.
 
 ## Security
 
+* [Security policy](../SECURITY.md) — how to report a vulnerability
 * [Security invariants](security/invariants.md) — every security goal as a testable statement, with its status
 
 ## Decisions
