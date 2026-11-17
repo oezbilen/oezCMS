@@ -40,7 +40,11 @@ deploy killed with `SIGKILL` does not leave it held.
 ## Migration states
 
 Each migration is recorded in `oezcms_migrations` with a SHA-256 checksum of the exact
-statement that was executed.
+statement that was executed. With separate migration credentials the table lives in the
+database named by `DB_MIGRATION_LOG_DATABASE`, otherwise in the application database
+([database-privileges.md](database-privileges.md)). The queries below use the bare name;
+qualify it (`oezcms_log.oezcms_migrations`) when the log has a database of its own, and
+run them as the deploy account.
 
 | Status | Meaning | Next deploy |
 |---|---|---|

@@ -37,6 +37,15 @@ abstract class DatabaseIntegrationTestCase extends TestCase
         ]);
     }
 
+    /**
+     * Where db:deploy keeps its log when it is configured to use a database of
+     * its own. Throwaway, like the test database itself.
+     */
+    protected function logDatabaseName(): string
+    {
+        return $this->requiredEnv('TEST_DB_LOG_NAME', 'oezcms_test_log');
+    }
+
     private function requiredEnv(string $key, ?string $default = null): string
     {
         $value = getenv($key);

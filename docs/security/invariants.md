@@ -22,6 +22,7 @@ Ids are numbered with gaps so a group can grow without renumbering the rest.
 | SEC-05 | Debug output cannot be enabled while the environment is production. | `KernelTest::testRejectsDebugInProduction` |
 | SEC-06 | No identifier reaches SQL text without passing an allow-list. | `DatabaseTest::testCallProcedureRejectsInvalidProcedureName`, `…RejectsInvalidParameterName` |
 | SEC-07 | The dependency set that is tested is the dependency set that ships. | `composer.lock` tracked, `composer validate --strict` in CI |
+| SEC-08 | With separate migration credentials, the deploy log lives in a database the runtime account holds no privilege on. | `MariaDbConnectionFactoryTest::testRequiresAMigrationLogDatabaseWithSeparateMigrationCredentials`, `DbDeployIntegrationTest::testKeepsTheLogInTheConfiguredLogDatabase`, [database-privileges.md](../deployment/database-privileges.md) |
 
 ## Authentication — pending
 

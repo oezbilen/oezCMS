@@ -198,6 +198,45 @@ final class MariaDbConnectionFactory
     }
 
     /**
+     * Where db:deploy keeps its log, or null for the application database.
+     *
+     * Separate migration credentials require a log database of their own. In the
+     * application database the runtime's grant covers the log, so the runtime
+     * could rewrite the record of what was deployed, and the separation the
+     * credentials announce would not hold. With a single account there is nothing
+     * to keep apart, which is why the log may stay where the schema is.
+     */
+    public function migrationLogDatabase(Config $config): ?string
+    {
+        $configured = $config->has('database.migration.log_database');
+
+        if (!$configured) {
+            if ($this->hasMigrationCredentials($config)) {
+                throw new DatabaseException(
+                    'Separate migration credentials require database.migration.log_database: '
+                    . 'in the application database the runtime\'s privileges cover the deploy log.',
+                );
+            }
+
+            return null;
+        }
+
+        $logDatabase = $config->getString('database.migration.log_database');
+
+        if ('' === $logDatabase) {
+            throw new DatabaseException('Invalid configuration: database.migration.log_database must not be empty.');
+        }
+
+        if ($logDatabase === $config->getString('database.name')) {
+            throw new DatabaseException(
+                'Invalid configuration: database.migration.log_database must differ from database.name.',
+            );
+        }
+
+        return $logDatabase;
+    }
+
+    /**
      * The two migration values are configured together or not at all. Half a pair
      * would silently combine one of them with a runtime value and fail to
      * authenticate for a reason the configuration does not show.

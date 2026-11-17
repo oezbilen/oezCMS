@@ -44,3 +44,4 @@ New records start from [the template](template.md).
 | 0009 | [Organise code along one axis](0009-organise-code-along-one-axis.md) | Accepted |
 | 0010 | [Keep a container of our own](0010-keep-a-container-of-our-own.md) | Accepted |
 | 0011 | [Parse .env with a strict parser of our own](0011-parse-env-with-a-strict-parser-of-our-own.md) | Accepted |
+| 0012 | [Keep the deploy log out of the runtime's reach](0012-keep-the-deploy-log-out-of-the-runtimes-reach.md) | Accepted |

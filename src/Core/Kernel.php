@@ -29,6 +29,7 @@ final class Kernel
         'migration' => [
             'DB_MIGRATION_USERNAME' => 'username',
             'DB_MIGRATION_PASSWORD' => 'password',
+            'DB_MIGRATION_LOG_DATABASE' => 'log_database',
         ],
         'ssl' => [
             'DB_SSL_CA' => 'ca',
@@ -69,9 +70,13 @@ final class Kernel
         });
 
         $container->set(MigrationDatabase::class, static function (Container $container): MigrationDatabase {
+            $config = $container->get(Config::class);
             $factory = new MariaDbConnectionFactory();
 
-            return new MigrationDatabase(new Database($factory->createForMigrations($container->get(Config::class))));
+            return new MigrationDatabase(
+                new Database($factory->createForMigrations($config)),
+                $factory->migrationLogDatabase($config),
+            );
         });
 
         return $container;

@@ -59,7 +59,8 @@ bin/console
 
 The runtime uses `Database` and never issues DDL. `db:deploy` uses `MigrationDatabase`,
 which may be a different login with the rights to change the schema. Without separate
-migration credentials both are the same account. Details and grants:
+migration credentials both are the same account. With them, the deploy log moves into a
+database of its own that the runtime holds no privilege on. Details and grants:
 [database-privileges.md](../deployment/database-privileges.md).
 
 ## Errors
