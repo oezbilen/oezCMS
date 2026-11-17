@@ -87,6 +87,18 @@ final class MariaDbConnectionFactoryTest extends TestCase
         self::assertStringContainsString('ONLY_FULL_GROUP_BY', $command);
     }
 
+    public function testOptionsSetSessionTimeZoneToUtc(): void
+    {
+        $options = (new MariaDbConnectionFactory())->options(new Config([]));
+
+        self::assertArrayHasKey(PDO::MYSQL_ATTR_INIT_COMMAND, $options);
+
+        $command = $options[PDO::MYSQL_ATTR_INIT_COMMAND];
+
+        self::assertIsString($command);
+        self::assertStringContainsString("SESSION time_zone = '+00:00'", $command);
+    }
+
     public function testOptionsKeepSecurePdoDefaults(): void
     {
         $options = (new MariaDbConnectionFactory())->options(new Config([]));

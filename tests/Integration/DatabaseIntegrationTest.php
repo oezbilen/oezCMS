@@ -26,6 +26,24 @@ final class DatabaseIntegrationTest extends DatabaseIntegrationTestCase
         self::assertStringContainsString('ONLY_FULL_GROUP_BY', $row['mode']);
     }
 
+    public function testSessionTimeZoneIsUtc(): void
+    {
+        $row = $this->database->fetchOne('SELECT @@SESSION.time_zone AS zone');
+
+        self::assertNotNull($row);
+        self::assertSame('+00:00', $row['zone']);
+    }
+
+    public function testCurrentTimestampIsUtc(): void
+    {
+        $row = $this->database->fetchOne(
+            'SELECT TIMESTAMPDIFF(MICROSECOND, UTC_TIMESTAMP(3), CURRENT_TIMESTAMP(3)) AS timezone_offset',
+        );
+
+        self::assertNotNull($row);
+        self::assertSame(0, $row['timezone_offset']);
+    }
+
     public function testRejectsStackedStatements(): void
     {
         $this->expectException(DatabaseException::class);
