@@ -39,7 +39,7 @@ deploy killed with `SIGKILL` does not leave it held.
 
 ## Migration states
 
-Each migration is recorded in `oezcms_migration` with a SHA-256 checksum of the exact
+Each migration is recorded in `oezcms_migrations` with a SHA-256 checksum of the exact
 statement that was executed.
 
 | Status | Meaning | Next deploy |
@@ -67,7 +67,7 @@ Resolve it by hand:
 
 ```sql
 SELECT migration, started_at, error_message
-  FROM oezcms_migration
+  FROM oezcms_migrations
  WHERE status = 'started';
 ```
 
@@ -77,7 +77,7 @@ does the table, column, index or routine exist?
 **It was applied.** Record that, leaving the stored checksum untouched:
 
 ```sql
-UPDATE oezcms_migration
+UPDATE oezcms_migrations
    SET status = 'completed', completed_at = NOW(3)
  WHERE migration = '005_example.sql';
 ```
@@ -85,7 +85,7 @@ UPDATE oezcms_migration
 **It was not applied.** Remove the row so the next deploy runs it again:
 
 ```sql
-DELETE FROM oezcms_migration WHERE migration = '005_example.sql';
+DELETE FROM oezcms_migrations WHERE migration = '005_example.sql';
 ```
 
 ## When a migration was modified after being applied

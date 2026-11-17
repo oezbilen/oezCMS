@@ -22,13 +22,12 @@ Done:
 * Consistent license metadata (GPL-3.0-or-later)
 * Documentation index, decision records, database and architecture documentation
 * UTC enforced for every database session
+* The deploy log follows the plural naming rule (`oezcms_migrations`)
 
 Open:
 
 * Development environment documentation, `.env.example`, a record of the `.env` format
 * `SECURITY.md`: how to report a vulnerability
-* Bring `oezcms_migration` in line with the plural naming rule, or record the exception
-  ([ADR 0002](../adr/0002-name-schema-objects-by-type-and-module.md))
 * Correct the outdated comment in `trg_locales_before_update` (the read cap now lives in
   `v_i18n_locale_chains`)
 * Plugin architecture as a decision record, without code. Whether discovery may scan a

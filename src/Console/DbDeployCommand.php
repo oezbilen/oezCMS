@@ -32,7 +32,7 @@ final class DbDeployCommand implements Command
     private const int DEFAULT_LOCK_TIMEOUT_SECONDS = 30;
 
     private const string TRACKING_TABLE_DDL = <<<'SQL'
-        CREATE TABLE IF NOT EXISTS oezcms_migration (
+        CREATE TABLE IF NOT EXISTS oezcms_migrations (
             migration VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
                 COMMENT 'Migration file name, applied exactly once in filename order',
             checksum CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
@@ -163,7 +163,7 @@ final class DbDeployCommand implements Command
         $database->executeRaw(self::TRACKING_TABLE_DDL);
 
         $tracked = [];
-        foreach ($database->fetchAll('SELECT migration, status, checksum FROM oezcms_migration') as $row) {
+        foreach ($database->fetchAll('SELECT migration, status, checksum FROM oezcms_migrations') as $row) {
             $migration = $row['migration'] ?? null;
 
             if (!is_string($migration)) {
@@ -227,7 +227,7 @@ final class DbDeployCommand implements Command
             }
 
             $database->execute(
-                'UPDATE oezcms_migration SET status = :status, completed_at = CURRENT_TIMESTAMP(3)'
+                'UPDATE oezcms_migrations SET status = :status, completed_at = CURRENT_TIMESTAMP(3)'
                 . ' WHERE migration = :migration',
                 ['status' => self::STATUS_COMPLETED, 'migration' => $entry['migration']],
             );
@@ -243,7 +243,7 @@ final class DbDeployCommand implements Command
     {
         if ($retry) {
             $database->execute(
-                'UPDATE oezcms_migration SET status = :status, checksum = :checksum,'
+                'UPDATE oezcms_migrations SET status = :status, checksum = :checksum,'
                 . ' started_at = CURRENT_TIMESTAMP(3), completed_at = NULL, error_message = NULL'
                 . ' WHERE migration = :migration',
                 ['status' => self::STATUS_STARTED, 'checksum' => $checksum, 'migration' => $migration],
@@ -253,7 +253,7 @@ final class DbDeployCommand implements Command
         }
 
         $database->execute(
-            'INSERT INTO oezcms_migration (migration, checksum, status) VALUES (:migration, :checksum, :status)',
+            'INSERT INTO oezcms_migrations (migration, checksum, status) VALUES (:migration, :checksum, :status)',
             ['migration' => $migration, 'checksum' => $checksum, 'status' => self::STATUS_STARTED],
         );
     }
@@ -262,7 +262,7 @@ final class DbDeployCommand implements Command
     {
         try {
             $database->execute(
-                'UPDATE oezcms_migration SET status = :status, error_message = :error'
+                'UPDATE oezcms_migrations SET status = :status, error_message = :error'
                 . ' WHERE migration = :migration',
                 ['status' => self::STATUS_FAILED, 'error' => $exception->getMessage(), 'migration' => $migration],
             );

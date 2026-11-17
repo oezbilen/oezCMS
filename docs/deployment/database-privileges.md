@@ -45,7 +45,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE
 `EXECUTE` is required because reads go through stored functions such as
 `fn_i18n_translate`.
 
-The runtime is deliberately not granted anything on `oezcms_migration`: it never reads
+The runtime is deliberately not granted anything on `oezcms_migrations`: it never reads
 or writes the deployment log. Restricting that table to the deploy account is the
 cheapest available check that the separation actually holds.
 
@@ -63,7 +63,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE,
 `DROP` and `ALTER ROUTINE` are needed because every object file uses
 `CREATE OR REPLACE`, which drops the existing object first. `REFERENCES` is needed for
 foreign keys, `EVENT` for scheduled events. `SELECT`, `INSERT` and `UPDATE` cover the
-`oezcms_migration` log and the seed migrations.
+`oezcms_migrations` log and the seed migrations.
 
 Granting `ALL PRIVILEGES ON oezcms.*` to the deploy account is a defensible
 simplification — it needs nearly all of them — but it then also carries rights the
