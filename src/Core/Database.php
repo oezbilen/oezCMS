@@ -11,7 +11,11 @@ use Throwable;
 
 final class Database
 {
-    private const string IDENTIFIER_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/';
+    /**
+     * The allow-list every identifier passes before it is placed into SQL text.
+     * Public so that the other places doing so share it rather than copy it.
+     */
+    public const string IDENTIFIER_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/';
     private const string SAVEPOINT_PREFIX = 'oezcms_sp_';
     private int $transactionLevel = 0;
     private ?string $unusableReason = null;

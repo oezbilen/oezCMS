@@ -32,7 +32,7 @@ final class DbDeployCommand implements Command
     private const int DEFAULT_LOCK_TIMEOUT_SECONDS = 30;
 
     private const string TRACKING_TABLE_DDL = <<<'SQL'
-        CREATE TABLE IF NOT EXISTS oezcms_migrations (
+        CREATE TABLE IF NOT EXISTS %s (
             migration VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
                 COMMENT 'Migration file name, applied exactly once in filename order',
             checksum CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
@@ -80,11 +80,12 @@ final class DbDeployCommand implements Command
             return ExitCode::Success;
         }
 
-        $database = $this->container->get(MigrationDatabase::class)->database();
+        $migrationDatabase = $this->container->get(MigrationDatabase::class);
+        $database = $migrationDatabase->database();
         $this->acquireLock($database);
 
         try {
-            $applied = $this->applyMigrations($database, $migrationFiles, $output);
+            $applied = $this->applyMigrations($database, $migrationDatabase->logTable(), $migrationFiles, $output);
 
             foreach ($objectFiles as $directory => $files) {
                 foreach ($files as $file) {
@@ -154,16 +155,16 @@ final class DbDeployCommand implements Command
     /**
      * @param list<string> $files
      */
-    private function applyMigrations(Database $database, array $files, Output $output): int
+    private function applyMigrations(Database $database, string $logTable, array $files, Output $output): int
     {
         if ([] === $files) {
             return 0;
         }
 
-        $database->executeRaw(self::TRACKING_TABLE_DDL);
+        $database->executeRaw(sprintf(self::TRACKING_TABLE_DDL, $logTable));
 
         $tracked = [];
-        foreach ($database->fetchAll('SELECT migration, status, checksum FROM oezcms_migrations') as $row) {
+        foreach ($database->fetchAll(sprintf('SELECT migration, status, checksum FROM %s', $logTable)) as $row) {
             $migration = $row['migration'] ?? null;
 
             if (!is_string($migration)) {
@@ -213,12 +214,12 @@ final class DbDeployCommand implements Command
 
         $count = 0;
         foreach ($pending as $entry) {
-            $this->recordStart($database, $entry['migration'], $entry['checksum'], $entry['retry']);
+            $this->recordStart($database, $logTable, $entry['migration'], $entry['checksum'], $entry['retry']);
 
             try {
                 $database->executeRaw($entry['sql']);
             } catch (DatabaseException $exception) {
-                $this->recordFailure($database, $entry['migration'], $exception);
+                $this->recordFailure($database, $logTable, $entry['migration'], $exception);
 
                 throw new ConsoleException(
                     sprintf('Migration %s failed: %s', $entry['migration'], $exception->getMessage()),
@@ -227,7 +228,7 @@ final class DbDeployCommand implements Command
             }
 
             $database->execute(
-                'UPDATE oezcms_migrations SET status = :status, completed_at = CURRENT_TIMESTAMP(3)'
+                sprintf('UPDATE %s SET status = :status, completed_at = CURRENT_TIMESTAMP(3)', $logTable)
                 . ' WHERE migration = :migration',
                 ['status' => self::STATUS_COMPLETED, 'migration' => $entry['migration']],
             );
@@ -239,11 +240,16 @@ final class DbDeployCommand implements Command
         return $count;
     }
 
-    private function recordStart(Database $database, string $migration, string $checksum, bool $retry): void
-    {
+    private function recordStart(
+        Database $database,
+        string $logTable,
+        string $migration,
+        string $checksum,
+        bool $retry,
+    ): void {
         if ($retry) {
             $database->execute(
-                'UPDATE oezcms_migrations SET status = :status, checksum = :checksum,'
+                sprintf('UPDATE %s SET status = :status, checksum = :checksum,', $logTable)
                 . ' started_at = CURRENT_TIMESTAMP(3), completed_at = NULL, error_message = NULL'
                 . ' WHERE migration = :migration',
                 ['status' => self::STATUS_STARTED, 'checksum' => $checksum, 'migration' => $migration],
@@ -253,16 +259,23 @@ final class DbDeployCommand implements Command
         }
 
         $database->execute(
-            'INSERT INTO oezcms_migrations (migration, checksum, status) VALUES (:migration, :checksum, :status)',
+            sprintf(
+                'INSERT INTO %s (migration, checksum, status) VALUES (:migration, :checksum, :status)',
+                $logTable,
+            ),
             ['migration' => $migration, 'checksum' => $checksum, 'status' => self::STATUS_STARTED],
         );
     }
 
-    private function recordFailure(Database $database, string $migration, DatabaseException $exception): void
-    {
+    private function recordFailure(
+        Database $database,
+        string $logTable,
+        string $migration,
+        DatabaseException $exception,
+    ): void {
         try {
             $database->execute(
-                'UPDATE oezcms_migrations SET status = :status, error_message = :error'
+                sprintf('UPDATE %s SET status = :status, error_message = :error', $logTable)
                 . ' WHERE migration = :migration',
                 ['status' => self::STATUS_FAILED, 'error' => $exception->getMessage(), 'migration' => $migration],
             );
