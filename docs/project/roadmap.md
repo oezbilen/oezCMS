@@ -26,11 +26,10 @@ Done:
 * Development environment documentation, `.env.example`, a record of the `.env` format
 * `SECURITY.md`: how to report a vulnerability
 * The deploy log is out of the runtime account's reach
+* The comment in `trg_locales_before_update` names where the read cap lives
 
 Open:
 
-* Correct the outdated comment in `trg_locales_before_update` (the read cap now lives in
-  `v_i18n_locale_chains`)
 * Plugin architecture as a decision record, without code. Whether discovery may scan a
   directory at all follows from SEC-40 and has to be settled before any manifest format.
 

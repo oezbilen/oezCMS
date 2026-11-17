@@ -8,8 +8,9 @@
 -- unexpectedly deep chains or pre-existing cyclic data.
 --
 -- The default locale must stay active so it can always serve as the last-resort
--- fallback. Reads additionally cap their traversal depth (fn_i18n_translate) as
--- an unconditional termination guarantee, independent of how data was produced.
+-- fallback. Reads additionally cap their traversal depth (fn_i18n_max_depth, applied
+-- by v_i18n_locale_chains) as an unconditional termination guarantee, independent of
+-- how data was produced.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE TRIGGER trg_locales_before_update
