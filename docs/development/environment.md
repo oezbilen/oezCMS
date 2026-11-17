@@ -24,23 +24,33 @@ Create the databases and one account per purpose. Development uses the same spli
 production, so a privilege the application should not have fails here first.
 
 ```sql
-CREATE DATABASE oezcms      CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
-CREATE DATABASE oezcms_test CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+CREATE DATABASE oezcms          CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+CREATE DATABASE oezcms_log      CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+CREATE DATABASE oezcms_test     CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+CREATE DATABASE oezcms_test_log CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
 
 CREATE USER 'oezcms_runtime'@'localhost' IDENTIFIED BY '…';
 CREATE USER 'oezcms_deploy'@'localhost'  IDENTIFIED BY '…';
 CREATE USER 'oezcms_test'@'localhost'    IDENTIFIED BY '…';
 
 GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON oezcms.* TO 'oezcms_runtime'@'localhost';
-GRANT ALL PRIVILEGES ON oezcms.*      TO 'oezcms_deploy'@'localhost';
+
+GRANT ALL PRIVILEGES ON oezcms.* TO 'oezcms_deploy'@'localhost';
+GRANT CREATE, SELECT, INSERT, UPDATE, DELETE ON oezcms_log.* TO 'oezcms_deploy'@'localhost';
+
 GRANT ALL PRIVILEGES ON oezcms_test.* TO 'oezcms_test'@'localhost';
+GRANT ALL PRIVILEGES ON oezcms_test_log.* TO 'oezcms_test'@'localhost';
 ```
 
 | Account | Used by | Rights |
 |---|---|---|
-| `oezcms_runtime` | the application (`DB_USERNAME`) | data and routine calls, no DDL |
-| `oezcms_deploy` | `db:deploy` (`DB_MIGRATION_USERNAME`) | the schema |
-| `oezcms_test` | the integration tests (`TEST_DB_USERNAME`) | the test database only |
+| `oezcms_runtime` | the application (`DB_USERNAME`) | data and routine calls in `oezcms`, no DDL, nothing in `oezcms_log` |
+| `oezcms_deploy` | `db:deploy` (`DB_MIGRATION_USERNAME`) | the schema in `oezcms`, the deploy log in `oezcms_log` |
+| `oezcms_test` | the integration tests (`TEST_DB_USERNAME`) | the two test databases only |
+
+With separate accounts the deploy log lives in a database of its own
+(`DB_MIGRATION_LOG_DATABASE`), because the runtime's grant on `oezcms` would otherwise
+cover it ([ADR 0012](../adr/0012-keep-the-deploy-log-out-of-the-runtimes-reach.md)).
 
 `ALL PRIVILEGES` for the deploy account is a simplification for development. The exact
 list a production deploy account needs is in
@@ -106,6 +116,7 @@ The integration tests read their connection from the process environment only. V
 | `TEST_DB_HOST` | `127.0.0.1` |
 | `TEST_DB_PORT` | `3306` |
 | `TEST_DB_NAME` | `oezcms_test` |
+| `TEST_DB_LOG_NAME` | `oezcms_test_log` |
 | `TEST_DB_USERNAME` | `root` |
 | `TEST_DB_PASSWORD` | empty |
 

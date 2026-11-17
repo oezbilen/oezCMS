@@ -2,6 +2,7 @@
 
 * Status: Accepted
 * Date: 2026-07-20 (recorded 2026-11-16)
+* See also: [0012](0012-keep-the-deploy-log-out-of-the-runtimes-reach.md), where the log lives
 
 ## Context
 

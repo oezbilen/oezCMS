@@ -23,11 +23,12 @@ Done:
 * Documentation index, decision records, database and architecture documentation
 * UTC enforced for every database session
 * The deploy log follows the plural naming rule (`oezcms_migrations`)
+* Development environment documentation, `.env.example`, a record of the `.env` format
+* `SECURITY.md`: how to report a vulnerability
+* The deploy log is out of the runtime account's reach
 
 Open:
 
-* Development environment documentation, `.env.example`, a record of the `.env` format
-* `SECURITY.md`: how to report a vulnerability
 * Correct the outdated comment in `trg_locales_before_update` (the read cap now lives in
   `v_i18n_locale_chains`)
 * Plugin architecture as a decision record, without code. Whether discovery may scan a
