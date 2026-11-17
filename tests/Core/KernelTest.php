@@ -28,6 +28,7 @@ final class KernelTest extends TestCase
         'DB_CHARSET',
         'DB_MIGRATION_USERNAME',
         'DB_MIGRATION_PASSWORD',
+        'DB_MIGRATION_LOG_DATABASE',
         'DB_SOCKET',
         'DB_SSL_CA',
         'DB_SSL_CERT',
@@ -162,6 +163,16 @@ final class KernelTest extends TestCase
         // would make half a pair look configured and trip the pair rule.
         self::assertFalse($config->has('database.migration.username'));
         self::assertFalse($config->has('database.migration.password'));
+        self::assertFalse($config->has('database.migration.log_database'));
+    }
+
+    public function testConfigMapsMigrationLogDatabase(): void
+    {
+        $this->appendToEnvFile("DB_MIGRATION_LOG_DATABASE=oezcms_log\n");
+
+        $config = (new Kernel($this->envFile))->boot()->get(Config::class);
+
+        self::assertSame('oezcms_log', $config->getString('database.migration.log_database'));
     }
 
     public function testBootRegistersLazyMigrationDatabaseFactory(): void

@@ -39,6 +39,7 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
             $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table');
             $this->pdo->exec('DROP TABLE IF EXISTS test_migration_table_two');
             $this->pdo->exec('DROP TABLE IF EXISTS oezcms_migrations');
+            $this->pdo->exec(sprintf('DROP TABLE IF EXISTS `%s`.oezcms_migrations', $this->logDatabaseName()));
         }
 
         $files = glob($this->databasePath . '/*/*.sql');
@@ -81,10 +82,13 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
         }
     }
 
-    private function runCommand(BufferedOutput $output, int $lockTimeoutSeconds = 30): ExitCode
-    {
+    private function runCommand(
+        BufferedOutput $output,
+        int $lockTimeoutSeconds = 30,
+        ?string $logDatabase = null,
+    ): ExitCode {
         $container = new Container();
-        $container->instance(MigrationDatabase::class, new MigrationDatabase($this->database));
+        $container->instance(MigrationDatabase::class, new MigrationDatabase($this->database, $logDatabase));
 
         $command = new DbDeployCommand($container, $this->databasePath, $lockTimeoutSeconds);
 
@@ -460,5 +464,59 @@ final class DbDeployIntegrationTest extends DatabaseIntegrationTestCase
             . "Triggers refreshed: 0\n",
             $output->contents(),
         );
+    }
+
+    public function testKeepsTheLogInTheConfiguredLogDatabase(): void
+    {
+        // Schema tests deploy without a log database and leave their log in the
+        // application database; it must not be mistaken for this run's.
+        $this->pdo->exec('DROP TABLE IF EXISTS oezcms_migrations');
+
+        $this->writeMigrationFile(
+            '001_create_table.sql',
+            'CREATE TABLE test_migration_table (id INT NOT NULL PRIMARY KEY)',
+        );
+
+        self::assertSame(
+            ExitCode::Success,
+            $this->runCommand(new BufferedOutput(), logDatabase: $this->logDatabaseName()),
+        );
+
+        $row = $this->database->fetchOne(
+            sprintf('SELECT status FROM `%s`.oezcms_migrations WHERE migration = :migration', $this->logDatabaseName()),
+            ['migration' => '001_create_table.sql'],
+        );
+
+        self::assertNotNull($row);
+        self::assertSame('completed', $row['status']);
+
+        // The point of a separate log database: nothing of the log is left in the
+        // database the runtime holds privileges on.
+        self::assertNull($this->database->fetchOne(
+            'SELECT TABLE_NAME FROM information_schema.tables'
+            . " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'oezcms_migrations'",
+        ));
+    }
+
+    public function testReadsTheLogFromTheConfiguredLogDatabase(): void
+    {
+        $this->writeMigrationFile(
+            '001_create_table.sql',
+            'CREATE TABLE test_migration_table (id INT NOT NULL PRIMARY KEY)',
+        );
+
+        self::assertSame(
+            ExitCode::Success,
+            $this->runCommand(new BufferedOutput(), logDatabase: $this->logDatabaseName()),
+        );
+
+        // A second run that looked for the log anywhere else would find nothing,
+        // apply the migration again and fail on the existing table.
+        $output = new BufferedOutput();
+        self::assertSame(
+            ExitCode::Success,
+            $this->runCommand($output, logDatabase: $this->logDatabaseName()),
+        );
+        self::assertStringContainsString('Migrations applied: 0', $output->contents());
     }
 }

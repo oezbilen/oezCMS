@@ -252,6 +252,115 @@ final class MariaDbConnectionFactoryTest extends TestCase
         $factory->migrationUsername($config);
     }
 
+    public function testKeepsTheMigrationLogInTheApplicationDatabaseWithASingleAccount(): void
+    {
+        $config = new Config([
+            'database' => ['name' => 'oezcms', 'username' => 'oezcms', 'password' => 'secret'],
+        ]);
+
+        self::assertNull((new MariaDbConnectionFactory())->migrationLogDatabase($config));
+    }
+
+    public function testRequiresAMigrationLogDatabaseWithSeparateMigrationCredentials(): void
+    {
+        // In the application database the runtime's grant covers the log, so
+        // separate accounts without a separate log would promise a separation
+        // that does not hold.
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => ['username' => 'oezcms_deploy', 'password' => 'deploy-secret'],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/database\.migration\.log_database/');
+
+        $factory->migrationLogDatabase($config);
+    }
+
+    public function testReturnsTheConfiguredMigrationLogDatabase(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => [
+                    'username' => 'oezcms_deploy',
+                    'password' => 'deploy-secret',
+                    'log_database' => 'oezcms_log',
+                ],
+            ],
+        ]);
+
+        self::assertSame('oezcms_log', (new MariaDbConnectionFactory())->migrationLogDatabase($config));
+    }
+
+    public function testAllowsAMigrationLogDatabaseWithASingleAccount(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'username' => 'oezcms',
+                'password' => 'secret',
+                'migration' => ['log_database' => 'oezcms_log'],
+            ],
+        ]);
+
+        self::assertSame('oezcms_log', (new MariaDbConnectionFactory())->migrationLogDatabase($config));
+    }
+
+    public function testRejectsAnEmptyMigrationLogDatabase(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => [
+                    'username' => 'oezcms_deploy',
+                    'password' => 'deploy-secret',
+                    'log_database' => '',
+                ],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/must not be empty/');
+
+        $factory->migrationLogDatabase($config);
+    }
+
+    public function testRejectsAMigrationLogDatabaseEqualToTheApplicationDatabase(): void
+    {
+        $config = new Config([
+            'database' => [
+                'name' => 'oezcms',
+                'username' => 'oezcms_runtime',
+                'password' => 'runtime-secret',
+                'migration' => [
+                    'username' => 'oezcms_deploy',
+                    'password' => 'deploy-secret',
+                    'log_database' => 'oezcms',
+                ],
+            ],
+        ]);
+
+        $factory = new MariaDbConnectionFactory();
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessageMatches('/must differ from database\.name/');
+
+        $factory->migrationLogDatabase($config);
+    }
+
     public function testRejectsUnsupportedCharset(): void
     {
         $factory = new MariaDbConnectionFactory();

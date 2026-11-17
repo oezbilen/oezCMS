@@ -88,11 +88,21 @@ jobs:
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist
 
+      # The service creates one database. The deploy log may live in a second
+      # one, which the test account needs full rights on as well.
+      - name: Create the deploy log test database
+        run: >-
+          docker exec ${{ job.services.mariadb.id }}
+          mariadb --user=root --password=root
+          --execute="CREATE DATABASE oezcms_test_log CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+          GRANT ALL PRIVILEGES ON oezcms_test_log.* TO 'oezcms'@'%';"
+
       - name: Run PHPUnit
         run: composer test
         env:
           TEST_DB_HOST: 127.0.0.1
           TEST_DB_PORT: '3306'
           TEST_DB_NAME: oezcms_test
+          TEST_DB_LOG_NAME: oezcms_test_log
           TEST_DB_USERNAME: oezcms
           TEST_DB_PASSWORD: oezcms
