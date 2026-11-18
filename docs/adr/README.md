@@ -45,3 +45,4 @@ New records start from [the template](template.md).
 | 0010 | [Keep a container of our own](0010-keep-a-container-of-our-own.md) | Accepted |
 | 0011 | [Parse .env with a strict parser of our own](0011-parse-env-with-a-strict-parser-of-our-own.md) | Accepted |
 | 0012 | [Keep the deploy log out of the runtime's reach](0012-keep-the-deploy-log-out-of-the-runtimes-reach.md) | Accepted |
+| 0013 | [Load plugins only after activation and verification](0013-load-plugins-only-after-activation-and-verification.md) | Proposed |

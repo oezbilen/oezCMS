@@ -12,7 +12,7 @@ Runtime core (environment, configuration, container, kernel), database layer, sc
 deployment, internationalisation in the schema, quality gates, and a full architecture
 review of all of it.
 
-## Phase 1 — Consolidation (current)
+## Phase 1 — Consolidation ✅
 
 Bringing the state in line before new features are built on it.
 
@@ -27,13 +27,10 @@ Done:
 * `SECURITY.md`: how to report a vulnerability
 * The deploy log is out of the runtime account's reach
 * The comment in `trg_locales_before_update` names where the read cap lives
+* Plugin architecture as a decision record, without code
+  ([ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md), proposed)
 
-Open:
-
-* Plugin architecture as a decision record, without code. Whether discovery may scan a
-  directory at all follows from SEC-40 and has to be settled before any manifest format.
-
-## Phase 2 — Media
+## Phase 2 — Media (next)
 
 Schema for media and files, storage outside the document root, metadata, console
 commands. Covers the storage half of SEC-24.
@@ -79,8 +76,9 @@ information, API keys. Entities exposed through the API carry a `public_id`
 
 ## Not scheduled
 
-* Plugin system implementation — plugins register routes, events and templates, so it
-  follows phase 6. SEC-40, SEC-41.
+* Plugin system implementation as designed in
+  [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md), SEC-40 to
+  SEC-48. Plugins register routes, events and templates, so it follows phase 6.
 * Taint analysis with Psalm, once there is HTTP input to trace.
 * `SQL SECURITY INVOKER` for routines, see
   [database-privileges.md](../deployment/database-privileges.md).

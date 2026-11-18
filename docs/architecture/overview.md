@@ -79,5 +79,6 @@ message naming the rule.
   will use are fixed in [psr-interfaces.md](../development/psr-interfaces.md).
 * **Modules.** `src/Modules/` does not exist yet. i18n lives entirely in the schema and
   has no PHP class.
-* **Plugins.** Discovery, registration and permissions need their own decision before any
-  code is written.
+* **Plugins.** The design is proposed in
+  [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md): operator-installed
+  in `plugins/`, explicitly activated, verified before loading. No code exists yet.
