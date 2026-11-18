@@ -92,5 +92,6 @@ second module.
 ## Plugins
 
 A plugin is a module that ships separately, and the same rules apply: `Core` and the
-published surface of other modules, nothing deeper. Discovery, registration and permissions
-are a separate decision.
+published surface of other modules, nothing deeper. Where plugins come from, how they are
+activated and verified, and where their database objects go is decided in
+[ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md).

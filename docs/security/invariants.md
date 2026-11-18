@@ -91,5 +91,12 @@ it, so the trigger is the second line rather than the only one.
 
 | Id | Invariant | Waiting on |
 |---|---|---|
-| SEC-40 | PHP is never loaded from a directory the web server can write to. | Plugin architecture |
-| SEC-41 | A plugin declares the permissions it needs. Anything not declared is refused at runtime rather than at review time. | Plugin architecture |
+| SEC-40 | Plugin code is never loaded if the plugin directory, any file in it or any parent directory up to the project root is writable by the runtime process, or if it contains a symbolic link. | Plugin loader, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-41 | A plugin receives only the core services behind the capabilities it declared; asking for any other is refused. This limits the official API and is not a sandbox. | Plugin loader, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-42 | A plugin is loaded only while its directory matches the digest recorded at activation; only `plugin:upgrade` records a new one. | Plugin loader, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-43 | A plugin name matches `^[a-z][a-z0-9]{1,23}$`, equals its directory name and is not reserved, before it is used in a path, identifier or class name. | Plugin manifest, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-44 | A plugin is not enabled unless the running core and every plugin it depends on satisfy its declared constraints. | Plugin manager, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-45 | A plugin that is present but not enabled is never registered with an autoloader. | Plugin loader, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-46 | The activation registry is not writable by the runtime process and is only ever replaced atomically. | Plugin manager, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-47 | The deploy refuses a plugin file that creates, alters or drops an object outside the plugin's namespace, or contains `DEFINER`, `GRANT` or `REVOKE`. A guard against mistakes, not a security boundary. | Plugin deploy, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+| SEC-48 | Once a plugin is recorded as disabled, none of its functions, procedures, views, triggers or events exist in the database. | Plugin manager, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
