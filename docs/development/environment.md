@@ -109,20 +109,24 @@ The database values are listed in
 `phpunit.xml` forces `APP_ENV=testing` and `APP_DEBUG=true`.
 
 The integration tests read their connection from the process environment only. Values in
-`.env` are not used. An unset or empty variable falls back to its default:
+`.env` are not used. An empty variable counts as unset.
 
 | Variable | Default |
 |---|---|
+| `TEST_DB_NAME` | required |
+| `TEST_DB_USERNAME` | required |
+| `TEST_DB_LOG_NAME` | `TEST_DB_NAME` followed by `_log` |
 | `TEST_DB_HOST` | `127.0.0.1` |
 | `TEST_DB_PORT` | `3306` |
-| `TEST_DB_NAME` | `oezcms_test` |
-| `TEST_DB_LOG_NAME` | `oezcms_test_log` |
-| `TEST_DB_USERNAME` | `root` |
 | `TEST_DB_PASSWORD` | empty |
 
 ```bash
-TEST_DB_USERNAME=oezcms_test TEST_DB_PASSWORD='…' composer test:integration
+TEST_DB_NAME=oezcms_test TEST_DB_USERNAME=oezcms_test TEST_DB_PASSWORD='…' composer test:integration
 ```
+
+Without `TEST_DB_NAME` or `TEST_DB_USERNAME` the integration tests are skipped, so
+`composer test` also runs on a machine without a database. CI runs them with
+`--fail-on-skipped`, because there a skip can only mean a broken workflow.
 
 The tests deploy the schema and use the data through one connection, that is, as a single
 account. The schema tests therefore keep the deploy log where a single account keeps it, in
@@ -133,6 +137,18 @@ database is normally empty. The test account needs full rights on both.
 > **The test database is wiped.** Before each schema test every event, trigger, view,
 > table and routine in `TEST_DB_NAME` is dropped and the schema is deployed fresh. Never
 > point it at a database whose content matters.
+
+The tests therefore refuse databases whose names do not say they are throwaway. Before
+anything is dropped, every integration test fails with the reason unless:
+
+* both names are lower case,
+* `TEST_DB_NAME` ends in `_test` and `TEST_DB_LOG_NAME` in `_test_log`, and
+* neither is the database that `DB_NAME` or `DB_MIGRATION_LOG_DATABASE` names in the
+  process environment.
+
+Right before the wipe, the tests also check that the connection really selected
+`TEST_DB_NAME`. A name only states what a database is for, so never give such a name to
+a database whose content matters.
 
 ## Quality gates
 
