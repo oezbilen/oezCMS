@@ -23,6 +23,16 @@ abstract class SchemaDeploymentTestCase extends DatabaseIntegrationTestCase
 
     private function wipeDatabase(): void
     {
+        // The connection was opened for testDatabaseName(), which the guard has
+        // accepted. Checking what the server actually selected keeps the drop
+        // below from ever running anywhere else.
+        $selected = $this->schemaNames('SELECT DATABASE() AS name');
+        $expected = $this->testDatabaseName();
+
+        if ([$expected] !== $selected) {
+            self::fail(sprintf('Refusing to wipe: the connection is not using "%s".', $expected));
+        }
+
         $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
 
         try {
