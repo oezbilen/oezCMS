@@ -19,6 +19,7 @@
             <directory suffix="Test.php">tests/Architecture</directory>
             <directory suffix="Test.php">tests/Core</directory>
             <directory suffix="Test.php">tests/Console</directory>
+            <directory suffix="Test.php">tests/Support</directory>
         </testsuite>
 
         <testsuite name="integration">

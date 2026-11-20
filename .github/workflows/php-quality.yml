@@ -97,8 +97,11 @@ jobs:
           --execute="CREATE DATABASE oezcms_test_log CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
           GRANT ALL PRIVILEGES ON oezcms_test_log.* TO 'oezcms'@'%';"
 
+      # Integration tests skip themselves when TEST_DB_NAME or TEST_DB_USERNAME
+      # is missing. Here that can only be a mistake in this file, so a skip fails
+      # the job instead of passing it with the database tests left out.
       - name: Run PHPUnit
-        run: composer test
+        run: composer test -- --fail-on-skipped
         env:
           TEST_DB_HOST: 127.0.0.1
           TEST_DB_PORT: '3306'

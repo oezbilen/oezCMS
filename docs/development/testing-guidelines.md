@@ -86,10 +86,11 @@ Database tests must:
 * clean up created data
 * be repeatable
 
-Integration tests live in `tests/Integration` and connect through `TEST_DB_HOST`,
-`TEST_DB_PORT`, `TEST_DB_NAME`, `TEST_DB_USERNAME` and `TEST_DB_PASSWORD`, read from the
-process environment only. An unset variable falls back to a default; the suite is not
-skipped. The test database is wiped before each schema test. Defaults and the warning are
+Integration tests live in `tests/Integration` and connect through the `TEST_DB_*`
+variables, read from the process environment only. `TEST_DB_NAME` and `TEST_DB_USERNAME`
+are required, and without them the integration tests are skipped. The test database is
+wiped before each schema test, so a database whose name does not mark it as a test
+database is refused before anything is dropped. The rules, defaults and the warning are
 in [environment.md](environment.md#tests).
 
 ---
