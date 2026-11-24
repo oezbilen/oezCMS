@@ -1,0 +1,32 @@
+# Dependabot proposes updates as pull requests; nothing is merged without
+# review and a green CI. Alerts and security updates are switched on in the
+# repository settings, not here.
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    # Updates stay within the constraints in composer.json. Raising a
+    # constraint, a new major version above all, is a change of its own.
+    versioning-strategy: lockfile-only
+    groups:
+      composer:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: ci
+      include: scope
