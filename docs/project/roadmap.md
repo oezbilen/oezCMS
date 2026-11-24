@@ -29,6 +29,10 @@ Done:
 * The comment in `trg_locales_before_update` names where the read cap lives
 * Plugin architecture as a decision record, without code
   ([ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md), proposed)
+* Integration tests refuse a database not named as a test database (SEC-09)
+* Routines and views run with their caller's rights
+  ([ADR 0014](../adr/0014-run-routines-and-views-with-the-callers-rights.md), SEC-50)
+* Locked dependencies audited daily, Dependabot, actions pinned to commit SHAs (SEC-51)
 
 ## Phase 2 — Media (next)
 
@@ -80,6 +84,8 @@ information, API keys. Entities exposed through the API carry a `public_id`
   [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md), SEC-40 to
   SEC-48. Plugins register routes, events and templates, so it follows phase 6.
 * Taint analysis with Psalm, once there is HTTP input to trace.
-* `SQL SECURITY INVOKER` for routines, see
-  [database-privileges.md](../deployment/database-privileges.md).
+* Mutation testing with Infection, after phase 2. Media is the first module with PHP logic
+  of its own, so before it there is little for mutations to measure.
+* A rollback drill before the first release: going back to the previous release on a copy,
+  code and database, written down as a procedure. Nothing describes a rollback yet.
 * First release. From then on migrations are immutable.
