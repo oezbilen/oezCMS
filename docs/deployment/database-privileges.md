@@ -91,20 +91,19 @@ Neither account needs `GRANT OPTION`, and neither needs any privilege outside `o
 and, for the deploy account, `oezcms_log`. `GET_LOCK`, which serialises concurrent
 deployments, requires no privilege.
 
-## Routine definer rights
+## Definer rights
 
-MariaDB creates stored routines with `SQL SECURITY DEFINER` by default, so a routine
-created by `oezcms_deploy` runs with that account's rights no matter who calls it.
-Today this changes nothing in practice: no routine performs DDL, and every table a
-routine touches is one the runtime may touch directly.
+MariaDB creates routines and views with `SQL SECURITY DEFINER` by default, so an object
+created by `oezcms_deploy` would run with that account's rights no matter who calls it.
+Every routine and view in the schema therefore declares `SQL SECURITY INVOKER` and runs
+with the caller's rights, so the runtime can do nothing through them that it could not
+do directly ([ADR 0014](../adr/0014-run-routines-and-views-with-the-callers-rights.md)).
+The runtime needs direct privileges on everything they touch, which its grant on
+`oezcms.*` provides.
 
-It does weaken the guarantee, though. A future routine doing something the runtime is
-not allowed to do would be callable by the runtime anyway, because `EXECUTE` is granted
-broadly. Declaring `SQL SECURITY INVOKER` on routines would close that, at the cost of
-requiring callers to hold direct privileges on everything a routine reads.
-
-Note also that the definer account must keep existing: dropping `oezcms_deploy` makes
-every routine it created fail on invocation.
+Triggers cannot be declared that way and always run as their definer. Their bodies are
+therefore limited to checking rows and refusing with `SIGNAL`. The definer account must
+keep existing: dropping `oezcms_deploy` makes every trigger it created fail.
 
 ## Verifying
 

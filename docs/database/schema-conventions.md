@@ -79,6 +79,10 @@ unconditional, and restoring means clearing `deleted_at`, not inserting again.
   (`sp_i18n_lock_locale_id_from_code`).
 * A procedure that opens its own transaction says so in its header and must not be
   called inside `Database::transaction()` (`sp_i18n_set_default_locale`).
+* Every routine and view declares `SQL SECURITY INVOKER`
+  ([0014](../adr/0014-run-routines-and-views-with-the-callers-rights.md)). In a routine the
+  clause follows the data-access characteristic (`READS SQL DATA`), in a view it precedes
+  `VIEW`.
 
 ## Files
 

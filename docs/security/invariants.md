@@ -24,6 +24,7 @@ Ids are numbered with gaps so a group can grow without renumbering the rest.
 | SEC-07 | The dependency set that is tested is the dependency set that ships. | `composer.lock` tracked, `composer validate --strict` in CI |
 | SEC-08 | With separate migration credentials, the deploy log lives in a database the runtime account holds no privilege on. | `MariaDbConnectionFactoryTest::testRequiresAMigrationLogDatabaseWithSeparateMigrationCredentials`, `DbDeployIntegrationTest::testKeepsTheLogInTheConfiguredLogDatabase`, [database-privileges.md](../deployment/database-privileges.md) |
 | SEC-09 | The integration tests drop objects only in databases named as test databases (lower case, ending in `_test` or `_test_log`) that `DB_NAME` and `DB_MIGRATION_LOG_DATABASE` do not name, and the wipe runs only on a connection that has that test database selected. | `TestDatabaseGuardTest`, `SchemaDeploymentTestCase::wipeDatabase`, [environment.md](../development/environment.md#tests) |
+| SEC-50 | Every routine and view in the schema runs with its caller's rights (`SQL SECURITY INVOKER`), never with those of the account that created it. | `SqlSecurityIntegrationTest`, [ADR 0014](../adr/0014-run-routines-and-views-with-the-callers-rights.md) |
 
 ## Authentication — pending
 
