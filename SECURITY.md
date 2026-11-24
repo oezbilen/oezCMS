@@ -36,8 +36,9 @@ routines.
 
 Not in scope:
 
-* vulnerabilities in third-party dependencies — please report those upstream; oezCMS
-  updates once a fix is available,
+* vulnerabilities in third-party dependencies — please report those upstream. The locked
+  versions are checked against known advisories daily, and oezCMS updates once a fix is
+  available,
 * findings that require prior administrative access to the server or the database,
 * output of automated scanners without a demonstrated impact.
 

@@ -158,7 +158,19 @@ a database whose content matters.
 | `composer cs:fix` | Applies the style |
 | `composer analyse` | PHPStan level 10 with strict rules |
 | `composer quality` | `cs:check`, `analyse` and `test` in one go |
+| `composer deps:audit` | `composer.lock` against known security advisories (needs network, not part of `quality`) |
 
 CI runs the same three gates as separate jobs, the tests against a MariaDB 11 service
 (`.github/workflows/php-quality.yml`). A change is ready for review when `composer quality`
 passes locally.
+
+A second workflow runs `composer deps:audit` on every push, on every pull request and once
+a day (`.github/workflows/dependency-audit.yml`). The daily run matters because advisories
+are published against versions that are already locked. A known vulnerability fails the
+job; an abandoned package is only reported.
+
+Dependabot proposes updates once a week, one grouped pull request for Composer and one for
+GitHub Actions (`.github/dependabot.yml`). Composer updates stay within the constraints in
+`composer.json`; raising a constraint is a change of its own. The workflows pin every action
+to a full commit SHA, with the version in a comment, so a moved tag cannot change what runs;
+Dependabot updates the SHA and the comment together.
