@@ -6,7 +6,7 @@
 -- Useful for identifying incomplete localization coverage.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW v_i18n_missing_translations AS
+CREATE OR REPLACE SQL SECURITY INVOKER VIEW v_i18n_missing_translations AS
 SELECT
     tk.domain,
     tk.translation_key,

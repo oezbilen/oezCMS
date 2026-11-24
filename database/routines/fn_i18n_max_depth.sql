@@ -18,6 +18,7 @@ CREATE OR REPLACE FUNCTION fn_i18n_max_depth()
 RETURNS TINYINT UNSIGNED
 DETERMINISTIC
 NO SQL
+SQL SECURITY INVOKER
 COMMENT 'Maximum number of locales considered when resolving a fallback chain'
 BEGIN
     RETURN 3;

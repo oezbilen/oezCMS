@@ -14,7 +14,7 @@
 -- those triggers never saw.
 -- -------------------------------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW v_i18n_locale_chains AS
+CREATE OR REPLACE SQL SECURITY INVOKER VIEW v_i18n_locale_chains AS
 WITH RECURSIVE chain AS (
     SELECT
         l.id AS root_locale_id,

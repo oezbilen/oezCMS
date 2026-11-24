@@ -20,6 +20,7 @@ CREATE OR REPLACE PROCEDURE sp_i18n_lock_locale_id_from_code(
     OUT p_locale_id SMALLINT UNSIGNED
 )
 MODIFIES SQL DATA
+SQL SECURITY INVOKER
 COMMENT 'Returns and locks a locale row by normalized code'
 BEGIN
     SET p_locale_id = NULL;

@@ -36,6 +36,7 @@ files, HTTP, cryptography, external services.
   `UUID`, recursive views). Portability to other databases is given up.
 * A module may have little or no PHP: i18n has none.
 * Routines run with their definer's rights by default, which weakens the account split;
-  see [database-privileges.md](../deployment/database-privileges.md).
+  see [database-privileges.md](../deployment/database-privileges.md) and
+  [0014](0014-run-routines-and-views-with-the-callers-rights.md).
 * Turning a refusal from the database into a message for a person is a job for the
   delivery layer.
