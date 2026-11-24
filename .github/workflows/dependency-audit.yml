@@ -1,0 +1,36 @@
+name: Dependency Audit
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Advisories are published against versions that are already locked, so an
+    # unchanged composer.lock has to be checked again, not only when it changes.
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Composer Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+        env:
+          update: true
+
+      # Reads composer.lock directly, so nothing is installed. A known
+      # vulnerability fails the job; an abandoned package is only reported.
+      # The same script runs the check locally.
+      - name: Audit locked dependencies
+        run: composer deps:audit
