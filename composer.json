@@ -67,6 +67,7 @@
         "test": "phpunit --configuration phpunit.xml",
         "test:unit": "phpunit --configuration phpunit.xml --testsuite unit",
         "test:integration": "phpunit --configuration phpunit.xml --testsuite integration",
+        "deps:audit": "@composer audit --locked --abandoned=report --no-interaction",
         "quality": [
             "@cs:check",
             "@analyse",
