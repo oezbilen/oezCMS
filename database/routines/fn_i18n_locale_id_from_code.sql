@@ -14,6 +14,7 @@ CREATE OR REPLACE FUNCTION fn_i18n_locale_id_from_code(
 )
 RETURNS SMALLINT UNSIGNED
 READS SQL DATA
+SQL SECURITY INVOKER
 COMMENT 'Returns the ID of an active locale by normalized code'
 BEGIN
     RETURN fn_i18n_locale_lookup(p_code, TRUE);

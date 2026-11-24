@@ -17,6 +17,7 @@ CREATE OR REPLACE PROCEDURE sp_i18n_set_default_locale(
     IN p_code VARCHAR(35) CHARACTER SET ascii COLLATE ascii_bin
 )
 MODIFIES SQL DATA
+SQL SECURITY INVOKER
 COMMENT 'Atomically switches the single default locale to an existing active locale'
 BEGIN
     DECLARE v_current_id SMALLINT UNSIGNED DEFAULT NULL;

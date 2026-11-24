@@ -24,6 +24,7 @@ CREATE OR REPLACE FUNCTION fn_i18n_translate(
 )
 RETURNS TEXT
 READS SQL DATA
+SQL SECURITY INVOKER
 COMMENT 'Resolves a translation via the fallback chain, then the default locale, then the key'
 BEGIN
     DECLARE v_value     TEXT;

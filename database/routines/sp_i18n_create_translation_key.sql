@@ -27,6 +27,7 @@ CREATE OR REPLACE PROCEDURE sp_i18n_create_translation_key(
     IN p_translation_key VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin
 )
 MODIFIES SQL DATA
+SQL SECURITY INVOKER
 COMMENT 'Creates a translation key or restores a soft-deleted one and returns its id'
 BEGIN
     -- Declared with the column's own type so the result set reports an integer

@@ -16,6 +16,7 @@ CREATE OR REPLACE FUNCTION fn_i18n_locale_lookup(
 )
 RETURNS SMALLINT UNSIGNED
 READS SQL DATA
+SQL SECURITY INVOKER
 COMMENT 'Returns a locale ID by normalized code with optional active-state filtering'
 BEGIN
     DECLARE v_id SMALLINT UNSIGNED DEFAULT NULL;
