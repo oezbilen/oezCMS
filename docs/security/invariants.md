@@ -15,7 +15,7 @@ Ids are numbered with gaps so a group can grow without renumbering the rest.
 
 | Id | Invariant | Held by |
 |---|---|---|
-| SEC-01 | An exception message never contains query parameter values. | `DatabaseExceptionTest::testDoesNotExposeParameterValuesInMessage` |
+| SEC-01 | A `DatabaseException` keeps the names of bound parameters, never their values: not as a property, and not among the call arguments that `Database` and the driver record in its trace or in that of the wrapped driver exception. | `DatabaseTest::testFailedQueryKeepsParameterValuesOutOfTheException`, `…testFailedProcedureCallKeepsParameterValuesOutOfTheException` |
 | SEC-02 | A connection never executes more than one statement per call. | `MariaDbConnectionFactoryTest::testOptionsDisableMultiStatementExecution` |
 | SEC-03 | Where a CA is configured the server certificate is verified, and that verification is not separately switchable. | `MariaDbConnectionFactoryTest::testAppliesTlsCertificateAuthority` |
 | SEC-04 | Schema changes use a different database login from the runtime one. | `MariaDbConnectionFactoryTest::testUsesConfiguredMigrationCredentials`, [database-privileges.md](../deployment/database-privileges.md) |
@@ -26,6 +26,20 @@ Ids are numbered with gaps so a group can grow without renumbering the rest.
 | SEC-09 | The integration tests drop objects only in databases named as test databases (lower case, ending in `_test` or `_test_log`) that `DB_NAME` and `DB_MIGRATION_LOG_DATABASE` do not name, and the wipe runs only on a connection that has that test database selected. | `TestDatabaseGuardTest`, `SchemaDeploymentTestCase::wipeDatabase`, [environment.md](../development/environment.md#tests) |
 | SEC-50 | Every routine and view in the schema runs with its caller's rights (`SQL SECURITY INVOKER`), never with those of the account that created it. | `SqlSecurityIntegrationTest`, [ADR 0014](../adr/0014-run-routines-and-views-with-the-callers-rights.md) |
 | SEC-51 | Every push, every pull request and a daily run audit `composer.lock`, and a locked version with a known security advisory fails that check. | `composer deps:audit` in `.github/workflows/dependency-audit.yml` |
+
+**SEC-01** used to say that an exception message never contains a parameter value. That
+was not true: after a failed query the message ends with the server's error text, and
+MariaDB quotes values in some of those (`Duplicate entry 'alice@example.com' for key …`).
+Nor was it enough, since the exception kept every value for `getParameters()` and in the
+call arguments of its trace. It now keeps names only and binds values one by one, so the
+wrapped driver exception does not record them either. One case is left: a parameter name
+with no placeholder fails while binding and records that value, which is a programming
+error rather than a failure at run time.
+
+Frames above `Database` belong to its callers and record their own arguments. A method that
+receives a secret marks that parameter `#[SensitiveParameter]`, and production runs with
+`zend.exception_ignore_args` on, as `php.ini-production` sets it. What messages can still
+contain is why SEC-25 keeps them out of responses.
 
 ## Authentication — pending
 
@@ -65,6 +79,7 @@ assertion is refused rather than logged.
 | SEC-22 | The Content-Security-Policy contains neither `unsafe-inline` nor `unsafe-eval`. | HTTP |
 | SEC-23 | Template output is escaped by default, and every `\|raw` carries a comment naming why that value is trusted. | Templating |
 | SEC-24 | Uploaded files are stored outside the document root and delivered through the application. A stored path is never derived from a client-supplied name. | Media |
+| SEC-25 | An error response never contains an exception message or a stack trace; both go to the log only. | HTTP |
 
 **SEC-20** is scoped to cookie authentication on purpose. A request authenticated by a
 bearer token needs no CSRF token — but only as long as that endpoint refuses cookie

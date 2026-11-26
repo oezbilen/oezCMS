@@ -7,6 +7,7 @@ namespace OezCMS\Core;
 use PDO;
 use PDOException;
 use PDOStatement;
+use SensitiveParameter;
 use Throwable;
 
 final class Database
@@ -50,7 +51,7 @@ final class Database
      * @param  array<string, mixed>             $parameters
      * @return array<int, array<string, mixed>>
      */
-    public function fetchAll(string $sql, array $parameters = []): array
+    public function fetchAll(string $sql, #[SensitiveParameter] array $parameters = []): array
     {
         /** @var array<int, array<string, mixed>> $rows */
         $rows = $this->run($sql, $parameters)->fetchAll(PDO::FETCH_ASSOC);
@@ -62,7 +63,7 @@ final class Database
      * @param  array<string, mixed>      $parameters
      * @return array<string, mixed>|null
      */
-    public function fetchOne(string $sql, array $parameters = []): ?array
+    public function fetchOne(string $sql, #[SensitiveParameter] array $parameters = []): ?array
     {
         /** @var array<string, mixed>|false $row */
         $row = $this->run($sql, $parameters)->fetch(PDO::FETCH_ASSOC);
@@ -73,7 +74,7 @@ final class Database
     /**
      * @param array<string, mixed> $parameters
      */
-    public function execute(string $sql, array $parameters = []): int
+    public function execute(string $sql, #[SensitiveParameter] array $parameters = []): int
     {
         return $this->run($sql, $parameters)->rowCount();
     }
@@ -131,7 +132,7 @@ final class Database
      * @param  array<string, mixed>                   $parameters
      * @return list<array<int, array<string, mixed>>>
      */
-    public function callProcedure(string $procedure, array $parameters = []): array
+    public function callProcedure(string $procedure, #[SensitiveParameter] array $parameters = []): array
     {
         if (1 !== preg_match(self::IDENTIFIER_PATTERN, $procedure)) {
             throw new DatabaseException(message: sprintf('Invalid procedure name: %s', $procedure));
@@ -166,7 +167,7 @@ final class Database
             throw new DatabaseException(
                 message: sprintf('Procedure call failed: %s', $exception->getMessage()),
                 sql: sprintf('CALL %s(%s)', $procedure, $placeholders),
-                parameters: $parameters,
+                parameterNames: array_keys($parameters),
                 code: (int) $exception->getCode(),
                 previous: $exception,
             );
@@ -308,9 +309,19 @@ final class Database
     }
 
     /**
+     * Values are bound one by one rather than handed to execute(). A driver
+     * exception records the arguments of the call that raised it unless
+     * zend.exception_ignore_args is on, and execute() without arguments leaves
+     * nothing to record. The bindings are the ones execute($parameters) would make:
+     * every value as PDO::PARAM_STR, a name with or without its leading colon.
+     *
+     * One case remains: a name the statement has no placeholder for fails in
+     * bindValue(), and that call records its value. It is a programming error
+     * rather than a failure at run time.
+     *
      * @param array<string, mixed> $parameters
      */
-    private function run(string $sql, array $parameters): PDOStatement
+    private function run(string $sql, #[SensitiveParameter] array $parameters): PDOStatement
     {
         $this->assertUsable();
 
@@ -321,18 +332,22 @@ final class Database
                 throw new DatabaseException(
                     message: sprintf('Failed to prepare statement: %s', $sql),
                     sql: $sql,
-                    parameters: $parameters,
+                    parameterNames: array_keys($parameters),
                 );
             }
 
-            $statement->execute($parameters);
+            foreach ($parameters as $name => $value) {
+                $statement->bindValue($name, $value);
+            }
+
+            $statement->execute();
 
             return $statement;
         } catch (PDOException $exception) {
             throw new DatabaseException(
                 message: sprintf('Database query failed: %s', $exception->getMessage()),
                 sql: $sql,
-                parameters: $parameters,
+                parameterNames: array_keys($parameters),
                 code: (int) $exception->getCode(),
                 previous: $exception,
             );
