@@ -91,7 +91,8 @@ scripts, no inline styles, no `onclick` attributes in any template. Every script
 nonce or a hash. Deciding this after the templates exist means going back through all of
 them.
 
-**SEC-24** is the nearest of these — Media is the next subsystem on the roadmap.
+**SEC-24** is the nearest of these. Phase 2 builds its storage half, made concrete by
+SEC-60 and SEC-61; the delivery half follows with HTTP.
 
 ## Audit — pending
 
@@ -118,3 +119,16 @@ it, so the trigger is the second line rather than the only one.
 | SEC-46 | The activation registry is not writable by the runtime process and is only ever replaced atomically. | Plugin manager, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
 | SEC-47 | The deploy refuses a plugin file that creates, alters or drops an object outside the plugin's namespace, or contains `DEFINER`, `GRANT` or `REVOKE`. A guard against mistakes, not a security boundary. | Plugin deploy, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
 | SEC-48 | Once a plugin is recorded as disabled, none of its functions, procedures, views, triggers or events exist in the database. | Plugin manager, [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md) |
+
+## Media — pending
+
+| Id | Invariant | Waiting on |
+|---|---|---|
+| SEC-60 | A stored file's path is built from the SHA-256 of its content and nothing else; the database refuses a hash of any other shape. | Media, [ADR 0016](../adr/0016-store-media-files-under-their-content-hash.md) |
+| SEC-61 | Media refuses a storage path that resolves to `public/` or below it, after symbolic links are resolved. | Media, [ADR 0016](../adr/0016-store-media-files-under-their-content-hash.md) |
+| SEC-62 | A file is stored only if the type detected from its content is an active entry of `media_types` and its size is within that type's limit. Neither the file name nor a declared type is consulted. | Media, [ADR 0017](../adr/0017-accept-media-types-by-content-from-an-allow-list.md) |
+| SEC-63 | Stored bytes never change: an existing file is never written again, and a `media_files` row refuses changes to its hash, size and type. | Media, [ADR 0016](../adr/0016-store-media-files-under-their-content-hash.md) |
+
+**SEC-62** names a format; it does not make a file harmless. A file that is valid in two
+formats passes, which is why delivery in phase 6 sends the stored type with
+`X-Content-Type-Options: nosniff` and never lets the browser guess.

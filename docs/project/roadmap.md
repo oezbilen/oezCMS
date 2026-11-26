@@ -37,7 +37,16 @@ Done:
 ## Phase 2 — Media (next)
 
 Schema for media and files, storage outside the document root, metadata, console
-commands. Covers the storage half of SEC-24.
+commands. Covers the storage half of SEC-24, and SEC-60 to SEC-63.
+
+Decided in ADR [0016](../adr/0016-store-media-files-under-their-content-hash.md) (files
+under their content hash), [0017](../adr/0017-accept-media-types-by-content-from-an-allow-list.md)
+(types by content from an allow-list), [0018](../adr/0018-keep-media-texts-per-locale.md)
+(texts per locale) and [0019](../adr/0019-wire-modules-in-the-entry-point.md) (modules wired
+in the entry point), all proposed until the code exists.
+
+Left out on purpose: thumbnails and other variants, folders, physical removal of files and
+SVG.
 
 **Delivery is not part of this phase.** Files are served through the application, which
 needs the HTTP layer of phase 6. Until then media is complete as data and storage only.
