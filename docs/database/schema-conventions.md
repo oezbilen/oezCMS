@@ -27,7 +27,8 @@ is in the linked [decision records](../adr/README.md).
   only where a child row means nothing without its parent (`translation_values` on
   `translation_keys`).
 * Entities exposed through an API additionally get `public_id UUID`, and only that leaves
-  the system. No such entity exists yet.
+  the system. The application supplies it as a random version 4 UUID, and a trigger keeps
+  it from changing (`media` is the first such table).
 
 ## Columns
 
@@ -104,6 +105,7 @@ unconditional, and restoring means clearing `deleted_at`, not inserting again.
 |---|---|---|
 | A property of the row as stored | `CHECK` | `chk_translation_keys_system_not_deleted` |
 | A transition, or a deletion | `BEFORE` trigger, `SIGNAL SQLSTATE '45000'` with a message naming the rule | `trg_translation_keys_before_update` |
+| A row that describes something immutable | `BEFORE UPDATE` trigger that refuses every update, no `updated_at` | `media_files` |
 | Exactly one row, such as a setting | primary key pinned by a check, `NOT NULL` columns, deletion refused by a trigger | `locale_settings` |
 | A reference only to a row in a given state | foreign key to a unique key that includes the state column, pinned by a check on the referencing side | `fk_locale_settings_active_default_locale` |
 | A bound on a read | cap and degrade, never signal | `fn_i18n_max_depth()` |
