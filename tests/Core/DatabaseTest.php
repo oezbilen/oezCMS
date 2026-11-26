@@ -10,6 +10,7 @@ use PDO;
 use PDOException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Throwable;
 
 final class DatabaseTest extends TestCase
 {
@@ -210,30 +211,97 @@ final class DatabaseTest extends TestCase
         return $pdo;
     }
 
-    public function testAttachesSqlAndParametersToQueryErrors(): void
+    public function testAttachesSqlAndParameterNamesToQueryErrors(): void
     {
         try {
             $this->database->fetchAll('SELECT id FROM non_existing_table WHERE id = :id', ['id' => 1]);
             self::fail('Expected DatabaseException was not thrown.');
         } catch (DatabaseException $exception) {
             self::assertSame('SELECT id FROM non_existing_table WHERE id = :id', $exception->getSql());
-            self::assertSame(['id' => 1], $exception->getParameters());
+            self::assertSame(['id'], $exception->getParameterNames());
         }
     }
 
-    public function testFailedQueryKeepsParameterValuesOutOfMessage(): void
+    public function testFailedQueryKeepsParameterValuesOutOfTheException(): void
     {
+        // The insert fails in execute(), after the values were bound.
+        $exception = $this->failureWithTraceArguments(
+            fn (): int => $this->database->execute(
+                'INSERT INTO users (id, name) VALUES (:id, :name)',
+                ['id' => 1, 'name' => 'super-secret-token'],
+            ),
+        );
+
+        self::assertSame(['id', 'name'], $exception->getParameterNames());
+        self::assertStringNotContainsString('super-secret-token', $this->describe($exception));
+    }
+
+    public function testFailedProcedureCallKeepsParameterValuesOutOfTheException(): void
+    {
+        $exception = $this->failureWithTraceArguments(
+            fn (): array => $this->database->callProcedure(
+                'missing_procedure',
+                ['token' => 'super-secret-token'],
+            ),
+        );
+
+        self::assertSame(['token'], $exception->getParameterNames());
+        self::assertStringNotContainsString('super-secret-token', $this->describe($exception));
+    }
+
+    /**
+     * Runs a call that is expected to fail, with call arguments recorded in traces.
+     * zend.exception_ignore_args suppresses them where php.ini-production applies;
+     * switched off, the test sees what a development setup, an error reporter or a
+     * logger writing out the exception would see.
+     */
+    private function failureWithTraceArguments(callable $call): DatabaseException
+    {
+        $ignoreArgs = ini_set('zend.exception_ignore_args', '0');
+        self::assertNotFalse($ignoreArgs);
+
         try {
-            $this->database->fetchAll(
-                'SELECT id FROM users WHERE secret = :secret',
-                ['secret' => 'super-secret-token'],
-            );
-            self::fail('Expected DatabaseException was not thrown.');
+            $call();
         } catch (DatabaseException $exception) {
-            self::assertStringNotContainsString('super-secret-token', $exception->getMessage());
-            self::assertSame('SELECT id FROM users WHERE secret = :secret', $exception->getSql());
-            self::assertSame(['secret' => 'super-secret-token'], $exception->getParameters());
+            return $exception;
+        } finally {
+            ini_set('zend.exception_ignore_args', $ignoreArgs);
         }
+
+        self::fail('Expected DatabaseException was not thrown.');
+    }
+
+    /**
+     * The messages of an exception chain and the call arguments recorded in its
+     * traces. An object is named rather than read: SensitiveParameterValue exists
+     * to hide what it holds, and taking it apart would defeat the check.
+     */
+    private function describe(Throwable $exception): string
+    {
+        $description = '';
+
+        for ($current = $exception; null !== $current; $current = $current->getPrevious()) {
+            $description .= $current->getMessage() . "\n";
+
+            foreach ($current->getTrace() as $frame) {
+                $description .= $this->describeValue($frame['args'] ?? []) . "\n";
+            }
+        }
+
+        return $description;
+    }
+
+    private function describeValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return implode(', ', array_map($this->describeValue(...), $value));
+        }
+
+        if (is_object($value)) {
+            return $value::class;
+        }
+
+        return var_export($value, true);
     }
 
     public function testCallProcedureRejectsInvalidProcedureName(): void
@@ -278,7 +346,7 @@ final class DatabaseTest extends TestCase
             self::fail('Expected DatabaseException was not thrown.');
         } catch (DatabaseException $exception) {
             self::assertSame('NOT VALID SQL', $exception->getSql());
-            self::assertSame([], $exception->getParameters());
+            self::assertSame([], $exception->getParameterNames());
             self::assertInstanceOf(PDOException::class, $exception->getPrevious());
         }
     }

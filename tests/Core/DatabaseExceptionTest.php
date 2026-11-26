@@ -16,27 +16,15 @@ final class DatabaseExceptionTest extends TestCase
         throw new DatabaseException('database error');
     }
 
-    public function testCarriesSqlAndParameters(): void
+    public function testCarriesSqlAndParameterNames(): void
     {
         $exception = new DatabaseException(
             message: 'query failed',
             sql: 'SELECT id FROM users WHERE id = :id',
-            parameters: ['id' => 7],
+            parameterNames: ['id'],
         );
 
         self::assertSame('SELECT id FROM users WHERE id = :id', $exception->getSql());
-        self::assertSame(['id' => 7], $exception->getParameters());
-    }
-
-    public function testDoesNotExposeParameterValuesInMessage(): void
-    {
-        $exception = new DatabaseException(
-            message: 'Database query failed: syntax error',
-            sql: 'SELECT * FROM users WHERE token = :token',
-            parameters: ['token' => 'super-secret-token'],
-        );
-
-        self::assertStringNotContainsString('super-secret-token', $exception->getMessage());
-        self::assertSame(['token' => 'super-secret-token'], $exception->getParameters());
+        self::assertSame(['id'], $exception->getParameterNames());
     }
 }
