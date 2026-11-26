@@ -9,9 +9,8 @@
 -- The decision is a single statement. ON DUPLICATE KEY UPDATE settles the conflict
 -- inside the engine, which closes the read-then-write window a SELECT followed by an
 -- INSERT would leave open. That is also why this procedure needs no transaction of its
--- own, and therefore -- unlike sp_i18n_set_default_locale -- may be called from within
--- one. A key is usually created in the middle of a larger operation, which is exactly
--- where that restriction would have hurt.
+-- own and may be called from within one. A key is usually created in the middle of a
+-- larger operation, which is exactly where a transaction of its own would have hurt.
 --
 -- LAST_INSERT_ID(id) makes the existing id readable on the conflict path. Measured on
 -- MariaDB 11 before this was written: the expression is evaluated even when the update

@@ -6,11 +6,16 @@
 -- Resolution order:
 --   1. Requested locale, matched even when inactive so its chain still applies
 --   2. Each locale along its fallback chain, capped by fn_i18n_max_depth()
---   3. Default locale, appended one step behind the deepest possible chain step
+--   3. Default locale from locale_settings, appended one step behind the deepest
+--      possible chain step
 --   4. Technical identifier in the form "domain.key"
 --
 -- Steps 1 to 3 form a single candidate list ordered by depth, so the resolution order
 -- is data rather than control flow and cannot drift from fn_i18n_locale_resolve.
+--
+-- The default is not the root of the fallback tree. A chain ends where its configured
+-- fallbacks end, and the default follows it as the last resort. Switching the default
+-- changes what is tried last, not the chains themselves.
 --
 -- Values are read from active locales and non-deleted keys only. A step whose locale
 -- is inactive stays in the chain but contributes nothing, which lets a disabled locale
@@ -43,9 +48,8 @@ BEGIN
 
           UNION ALL
 
-          SELECT d.id, fn_i18n_max_depth() + 1
-            FROM locales AS d
-           WHERE d.is_default = TRUE
+          SELECT s.default_locale_id, fn_i18n_max_depth() + 1
+            FROM locale_settings AS s
       ) AS candidate
       JOIN locales AS l
         ON l.id = candidate.locale_id

@@ -75,10 +75,10 @@ unconditional, and restoring means clearing `deleted_at`, not inserting again.
   and collation. A mismatch either fails with a collation error or silently bypasses the
   index.
 * A procedure returns data to PHP as a result set, never through `OUT`:
-  `Database::callProcedure()` reads result sets. `OUT` is for routines calling routines
-  (`sp_i18n_lock_locale_id_from_code`).
+  `Database::callProcedure()` reads result sets. `OUT` is for routines calling routines.
 * A procedure that opens its own transaction says so in its header and must not be
-  called inside `Database::transaction()` (`sp_i18n_set_default_locale`).
+  called inside `Database::transaction()`. None does today: a change that fits in one
+  statement needs no transaction of its own (`sp_i18n_set_default_locale`).
 * Every routine and view declares `SQL SECURITY INVOKER`
   ([0014](../adr/0014-run-routines-and-views-with-the-callers-rights.md)). In a routine the
   clause follows the data-access characteristic (`READS SQL DATA`), in a view it precedes
@@ -104,7 +104,8 @@ unconditional, and restoring means clearing `deleted_at`, not inserting again.
 |---|---|---|
 | A property of the row as stored | `CHECK` | `chk_translation_keys_system_not_deleted` |
 | A transition, or a deletion | `BEFORE` trigger, `SIGNAL SQLSTATE '45000'` with a message naming the rule | `trg_translation_keys_before_update` |
-| At most one row with a flag set | unique key over a generated `NULLIF(flag, 0)` column | `locales.default_flag` |
+| Exactly one row, such as a setting | primary key pinned by a check, `NOT NULL` columns, deletion refused by a trigger | `locale_settings` |
+| A reference only to a row in a given state | foreign key to a unique key that includes the state column, pinned by a check on the referencing side | `fk_locale_settings_active_default_locale` |
 | A bound on a read | cap and degrade, never signal | `fn_i18n_max_depth()` |
 
 A check validates the resulting row; it never sees the transition that produced it, and it
