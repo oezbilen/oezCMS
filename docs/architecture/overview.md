@@ -80,7 +80,8 @@ message naming the rule.
 * **HTTP.** There is no web entry point, router or request handling. The PSR interfaces it
   will use are fixed in [psr-interfaces.md](../development/psr-interfaces.md).
 * **Modules.** `src/Modules/` does not exist yet. i18n lives entirely in the schema and
-  has no PHP class.
+  has no PHP class. Media will be the first module with PHP code; how a module is wired
+  is proposed in [ADR 0019](../adr/0019-wire-modules-in-the-entry-point.md).
 * **Plugins.** The design is proposed in
   [ADR 0013](../adr/0013-load-plugins-only-after-activation-and-verification.md): operator-installed
   in `plugins/`, explicitly activated, verified before loading. No code exists yet.

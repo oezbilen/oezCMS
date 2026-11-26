@@ -48,3 +48,7 @@ New records start from [the template](template.md).
 | 0013 | [Load plugins only after activation and verification](0013-load-plugins-only-after-activation-and-verification.md) | Proposed |
 | 0014 | [Run routines and views with the caller's rights](0014-run-routines-and-views-with-the-callers-rights.md) | Accepted |
 | 0015 | [Keep exactly one default locale in a settings row](0015-keep-exactly-one-default-locale-in-a-settings-row.md) | Accepted |
+| 0016 | [Store media files under their content hash](0016-store-media-files-under-their-content-hash.md) | Proposed |
+| 0017 | [Accept media types by content from an allow-list](0017-accept-media-types-by-content-from-an-allow-list.md) | Proposed |
+| 0018 | [Keep media texts per locale](0018-keep-media-texts-per-locale.md) | Proposed |
+| 0019 | [Wire modules in the entry point](0019-wire-modules-in-the-entry-point.md) | Proposed |
