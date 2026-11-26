@@ -17,7 +17,7 @@ strings. Their keys are technical identifiers that the code names, such as
 ## Decision
 
 Title and alt text live in `media_texts`. The table has one row per media entry and locale,
-with the primary key `(media_id, locale_id)`.
+held by a unique key on `(media_id, locale_id)`.
 
 * The foreign key to `media` cascades, because a text means nothing without its entry.
 * The foreign key to `locales` restricts, as every reference to a locale does.
