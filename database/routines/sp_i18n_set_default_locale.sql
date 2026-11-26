@@ -1,16 +1,17 @@
 -- -------------------------------------------------------------------------------------------------
 -- Set Default Locale
 --
--- Atomically switches the default locale to an existing active locale.
+-- Makes the active locale with the given code the default: the last-resort fallback that
+-- fn_i18n_translate appends behind every chain. Only the setting moves. Fallback chains
+-- stay as configured, so the new default does not become the root of anything.
 --
--- The current default locale is locked first to serialize concurrent default
--- locale changes. The requested target locale is then resolved and locked.
+-- The switch is a single UPDATE of the one row in locale_settings, so there is no moment
+-- without a default and no need for a transaction of its own. The procedure may
+-- therefore be called from inside an application transaction, and rolls back with it.
 --
--- Opens its own transaction, so it must not be called from inside an application
--- transaction: START TRANSACTION would implicitly commit the enclosing one and
--- leave the caller believing it can still roll back.
---
--- An exception is raised if the requested locale does not exist or is inactive.
+-- The lookup only turns an unknown or inactive code into a readable refusal. The rule
+-- itself is fk_locale_settings_active_default_locale, which also refuses a locale that is
+-- deactivated between the lookup and the update.
 -- -------------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE sp_i18n_set_default_locale(
@@ -18,45 +19,18 @@ CREATE OR REPLACE PROCEDURE sp_i18n_set_default_locale(
 )
 MODIFIES SQL DATA
 SQL SECURITY INVOKER
-COMMENT 'Atomically switches the single default locale to an existing active locale'
+COMMENT 'Switches the default locale to an existing active locale'
 BEGIN
-    DECLARE v_current_id SMALLINT UNSIGNED DEFAULT NULL;
-    DECLARE v_target_id SMALLINT UNSIGNED DEFAULT NULL;
+    DECLARE v_locale_id SMALLINT UNSIGNED DEFAULT NULL;
 
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        RESIGNAL;
-    END;
+    SET v_locale_id = fn_i18n_locale_id_from_code(p_code);
 
-    START TRANSACTION;
+    IF v_locale_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The default locale must be an existing active locale';
+    END IF;
 
-        -- Serialize concurrent attempts to change the default locale.
-        SELECT l.id
-          INTO v_current_id
-          FROM locales AS l
-         WHERE l.is_default = TRUE
-         LIMIT 1
-           FOR UPDATE;
-
-        -- Resolve and lock the requested active locale.
-        CALL sp_i18n_lock_locale_id_from_code(p_code, TRUE, v_target_id);
-
-        IF v_target_id IS NULL THEN
-            SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'The default locale must be an existing active locale';
-        END IF;
-
-        -- Skip unnecessary writes when the locale is already the default.
-        IF v_current_id IS NULL OR v_current_id <> v_target_id THEN
-            UPDATE locales
-               SET is_default = FALSE
-             WHERE is_default = TRUE;
-
-            UPDATE locales
-               SET is_default = TRUE
-             WHERE id = v_target_id;
-        END IF;
-
-    COMMIT;
+    UPDATE locale_settings
+       SET default_locale_id = v_locale_id
+     WHERE id = 1;
 END;

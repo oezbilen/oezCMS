@@ -6,16 +6,13 @@
 -- one.
 --
 -- English is joined by code rather than written as a literal id, which is what makes the
--- relationship checkable. If the default locale were missing, this statement inserts
+-- relationship checkable. If English were missing, this statement inserts
 -- nothing and says so through a row count; a literal 1 would instead point 22 locales at
 -- whichever row happens to carry that id.
 --
 -- The first branch of the union names the columns; the rest inherit those names by
 -- position. ORDER BY is not about the ids themselves but about reproducibility: the same
 -- migrations should produce the same database twice, so dumps stay comparable.
---
--- is_default is deliberately absent. The column defaults to FALSE, so this migration
--- cannot create a second default even by accident; that decision is made once, in 004.
 -- -------------------------------------------------------------------------------------------------
 
 INSERT INTO locales (

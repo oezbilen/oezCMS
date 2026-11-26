@@ -7,9 +7,9 @@
 -- Fallback cycles are rejected by write-time triggers on locales; reads additionally
 -- cap the traversal depth.
 --
--- At most one locale is the default, enforced by a unique index over a generated flag
--- column. The default is the last-resort translation fallback, so triggers keep it
--- active and prevent its deletion.
+-- Which locale is the default lives in locale_settings. Its foreign key references
+-- (id, is_active) through uk_locales_id_active, which is what keeps the default active
+-- and undeletable (ADR 0015).
 -- -------------------------------------------------------------------------------------------------
 
 CREATE TABLE locales (
@@ -25,20 +25,16 @@ CREATE TABLE locales (
         COMMENT 'Fallback locale used when translation is missing',
     sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'TRUE if locale is enabled for use',
-    is_default BOOLEAN NOT NULL DEFAULT FALSE
-        COMMENT 'TRUE for the single locale used as the last-resort translation fallback',
-    default_flag TINYINT AS (NULLIF(is_default, 0)) VIRTUAL
-        COMMENT 'NULL unless is_default, so the unique key permits at most one default locale',
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (id),
     UNIQUE KEY uk_locales_code (code),
-    UNIQUE KEY uk_locales_default (default_flag),
+    UNIQUE KEY uk_locales_id_active (id, is_active)
+        COMMENT 'Referenced by fk_locale_settings_active_default_locale',
     INDEX idx_locales_fallback (fallback_locale_id),
     INDEX idx_locales_active (is_active, sort_order, code),
     CONSTRAINT chk_locales_code CHECK (code REGEXP '^[a-z]{2,3}(-[a-z0-9]{2,8})*$'),
     CONSTRAINT chk_locales_is_active CHECK (is_active IN (0,1)),
-    CONSTRAINT chk_locales_is_default CHECK (is_default IN (0,1)),
     CONSTRAINT fk_locales_fallback_locale
         FOREIGN KEY (fallback_locale_id) REFERENCES locales(id)
         ON DELETE RESTRICT
