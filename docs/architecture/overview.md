@@ -67,8 +67,10 @@ database of its own that the runtime holds no privilege on. Details and grants:
 
 Each subsystem throws its own exception: `EnvironmentException`, `ContainerException`
 (with `ServiceNotFoundException` for an unknown id), `DatabaseException`,
-`ConsoleException`. A `DatabaseException` carries the SQL and its parameters for
-debugging, but never puts parameter values into its message.
+`ConsoleException`. A `DatabaseException` carries the SQL and the names of its parameters
+for debugging, never their values (SEC-01). Its message is another matter: after a failed
+query it ends with the server's error text, which can quote a value, so it is meant for
+operators and the log, never for a response (SEC-25).
 
 Rules enforced by the database arrive as `DatabaseException` with `SQLSTATE 45000` and a
 message naming the rule.
